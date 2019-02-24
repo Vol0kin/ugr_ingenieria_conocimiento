@@ -1,5 +1,4 @@
 ; Habitaciones de la casa
-
 (deffacts habitaciones
 	(Habitacion Pasillo)
 	(Habitacion Cocina)
