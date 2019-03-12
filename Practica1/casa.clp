@@ -10,7 +10,7 @@
 (deffacts habitaciones
 	(Habitacion Pasillo)
 	(Habitacion Cocina)
-	(Habitacion Baño)
+	(Habitacion WC)
 	(Habitacion Salon)
 	(Habitacion Dormitorio_Principal)
 	(Habitacion Dormitorio_1)
@@ -21,7 +21,7 @@
 ; Puertas de la casa
 (deffacts puertas
 	(Puerta Pasillo Dormitorio_2)
-	(Puerta Pasillo Baño)
+	(Puerta Pasillo WC)
 	(Puerta Pasillo Salon)
 	(Puerta Salon Dormitorio_Principal)
 	(Puerta Salon Dormitorio_1)
@@ -37,7 +37,7 @@
 (deffacts ventanas
 	(Ventana Dormitorio_2)
 	(Ventana Cocina)
-	(Ventana Baño)
+	(Ventana WC)
 	(Ventana Salon)
 	(Ventana Dormitorio_1)
 	(Ventana Terraza)
