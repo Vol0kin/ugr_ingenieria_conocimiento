@@ -51,7 +51,34 @@
 
 (defrule primera_activacion_sensor
   (valor_registrado ?t movimiento ?habitacion on)
-  (not (ultima_activacion movimiento ?habitacion ?t))
+  (not (ultima_activacion movimiento ?habitacion ?))
   =>
   (assert (ultima_activacion movimiento ?habitacion ?t))
- )
+)
+
+(defrule activacion_sensor_mov
+  (valor_registrado ?t movimiento ?habitacion on)
+  (ultima_desactivacion movimiento ?habitacion ?t2)
+  (test (> ?t ?t2))
+  ?f <- (ultima_activacion movimiento ?habitacion ?t3 & ~?t)
+  =>
+  (assert (ultima_activacion movimiento ?habitacion ?t))
+  (retract ?f)
+)
+
+(defrule primera_desactivacion_sensor
+  (valor_registrado ?t movimiento ?habitacion off)
+  (not (ultima_desactivacion movimiento ?habitacion ?))
+  =>
+  (assert (ultima_desactivacion movimiento ?habitacion ?t))
+)
+
+(defrule desactivacion_sensor_mov
+  (valor_registrado ?t movimiento ?habitacion off)
+  (ultima_activacion movimiento ?habitacion ?t2)
+  (test (> ?t ?t2))
+  ?f <- (ultima_desactivacion movimiento ?habitacion ?t3 & ~?t)
+  =>
+  (assert (ultima_desactivacion movimiento ?habitacion ?t))
+  (retract ?f)
+)
