@@ -1,84 +1,111 @@
 ; Practica 1
 
-; Registro de los datos de sensores
+; Reglas para gestionar los datos de entrada de los sensores
 
-; Registra un nuevo valor de un sensor
-; Indica que se tiene que guardar una nueva
-; activacion del sensor
-(defrule nuevo_valor_sensor
-	?valor <- (valor ?tipo ?habitacion ?v)
-  (Habitacion ?habitacion)
-	=>
-  (assert (guardar_ultimo_registro))
-	(assert (valor_registrado (time) ?tipo ?habitacion ?v))
-  (retract ?valor)
-)
-
-; Guarda la primera vez que se registra la activacion
-; de un sensor. Como no ha habido una previa, no se
-; borra
-; Se da en los siguientes casos:
-; - se ha registrado un nuevo valor para el sensor
-; - el utlimo valor no esta actualizado para ese valor
-; - se ha indicado que se tiene que guardar el ultimo
-;   registro
-(defrule primer_registro_sensor
-	(valor_registrado ?t ?tipo ?habitacion ?)
-	(not (ultimo_registro ?tipo ?habitacion ?))
-  ?f <- (guardar_ultimo_registro)
-  =>
-	(assert (ultimo_registro ?tipo ?habitacion ?t))
-  (retract ?f)
-)
-
-; Registra cuando es la ultima vez que se activo un sensor
-; Elimina la activacion anterior
-; Se activa cuando se cumplen las siguientes condiciones:
-; - se ha registrado un nuevo valor para el sensor
-; - el utlimo valor no esta actualizado para ese valor
-; - se ha indicado que se tiene que guardar el ultimo
-;   registro
-; - existe una ultima activacion anterior a esta
+; Regla para incluir un nuevo valor_registrado
+; Inserta tambien un nuevo ultimo_registro
+; La habitacion tiene que ser valida
 (defrule nuevo_registro
-  (valor_registrado ?t ?tipo ?habitacion ?)
-  ?f <- (guardar_ultimo_registro)
-	?Registro <- (ultimo_registro ?tipo ?habitacion ?)
-	=>
-	(assert (ultimo_registro ?tipo ?habitacion ?t))
-	(retract ?Registro)
+  (valor ?tipo ?h ?v)
+  (Habitacion ?h)
+  =>
+  (bind ?t (time))
+  (assert (valor_registrado ?t ?tipo ?h ?v))
+  (assert (ultimo_registro ?tipo ?h ?t))
+)
+
+; Regla para eliminar el anterior ultimo_registro
+; del mismo tipo para una habitacion segun el tiempo
+(defrule ultimo_reg
+  ?f <- (ultimo_registro ?tipo ?h ?t1)
+  (ultimo_registro ?tipo ?h ?t2)
+  (test (< ?t1 ?t2))
+  =>
   (retract ?f)
 )
 
-(defrule primera_activacion_sensor
-  (valor_registrado ?t movimiento ?habitacion on)
-  (not (ultima_activacion movimiento ?habitacion ?))
+; Regla para insertar una nueva ultima_activacion 
+; de un sensor de movimiento en una habitacion en un 
+; tiempo
+; Se inserta la ultima activacion segun una variable
+; que va cambiando, que dice que se ha dado un cambio 
+; del tipo off -> on 
+; Se inserta que se ha producido ese cambio para evitar 
+; insertar valores de ultima_activacion que sean del tipo 
+; on -> on   
+(defrule ultima_act_mov
+  (ultimo_registro movimiento ?h ?t)
+  (valor movimiento ?h on)
+  (not (activacion movimiento ?h ?))
   =>
-  (assert (ultima_activacion movimiento ?habitacion ?t))
+  (assert (ultima_activacion movimiento ?h ?t))
+  (assert (activacion movimiento ?h ?t))
 )
 
-(defrule activacion_sensor_mov
-  (valor_registrado ?t movimiento ?habitacion on)
-  (ultima_desactivacion movimiento ?habitacion ?t2)
-  (test (> ?t ?t2))
-  ?f <- (ultima_activacion movimiento ?habitacion ?t3 & ~?t)
+; Regla para insertar una nueva ultima_desactivacion 
+; de un sensor de movimiento en una habitacion en un 
+; tiempo
+; Se inserta la ultima desactivacion segun una variable
+; que va cambiando, que dice que se ha dado un cambio 
+; del tipo on -> off 
+; Se inserta que se ha producido ese cambio para evitar 
+; insertar valores de ultima_desactivacion que sean del tipo 
+; off -> off   
+(defrule ultima_desact_mov
+  (ultimo_registro movimiento ?h ?t)
+  (valor movimiento ?h off)
+  (not (desactivacion movimiento ?h ?))
   =>
-  (assert (ultima_activacion movimiento ?habitacion ?t))
+  (assert (ultima_desactivacion movimiento ?h ?t))
+  (assert (desactivacion movimiento ?h ?t))
+)
+
+; Regla que permite comprobar que se ha dado un 
+; cambio del tipo on -> off en un sensor de movimiento
+; Elimina que se ha producido una desactivacion 
+; e inserta una activacion
+(defrule activacion
+  (activacion movimiento ?h ?t)
+  ?f <- (desactivacion movimiento ?h ?t2)
+  (test (< ?t2 ?t))
+  =>
   (retract ?f)
 )
 
-(defrule primera_desactivacion_sensor
-  (valor_registrado ?t movimiento ?habitacion off)
-  (not (ultima_desactivacion movimiento ?habitacion ?))
+; Regla que permite comprobar que se ha dado un 
+; cambio del tipo off -> on en un sensor de movimiento 
+; Elimina que se haya producido una activacion 
+; e inserta una desactivacion
+(defrule desactivacion
+  (desactivacion movimiento ?h ?t)
+  ?f <- (activacion movimiento ?h ?t2)
+  (test (< ?t2 ?t))
   =>
-  (assert (ultima_desactivacion movimiento ?habitacion ?t))
-)
-
-(defrule desactivacion_sensor_mov
-  (valor_registrado ?t movimiento ?habitacion off)
-  (ultima_activacion movimiento ?habitacion ?t2)
-  (test (> ?t ?t2))
-  ?f <- (ultima_desactivacion movimiento ?habitacion ?t3 & ~?t)
-  =>
-  (assert (ultima_desactivacion movimiento ?habitacion ?t))
   (retract ?f)
 )
+
+; Regla que permite eliminar la ultima_activacion mas antigua
+(defrule borrar_act_anterior
+  ?f <- (ultima_activacion movimiento ?h ?t)
+  (ultima_activacion movimiento ?h ?t2)
+  (test (< ?t ?t2))
+  =>
+  (retract ?f)
+)
+
+; Regla que permite eliminar la ultima_desactivacion mas antigua
+(defrule borrar_desact_anterior
+  ?f <- (ultima_desactivacion movimiento ?h ?t)
+  (ultima_desactivacion movimiento ?h ?t2)
+  (test (< ?t ?t2))
+  =>
+  (retract ?f)
+)
+
+; Regla para borrar el valor registrado
+(defrule borrar_valor
+  (declare (salience -10))
+  ?f <- (valor ?tipo ?h ?v)
+  =>
+  (retract ?f)
+ )
