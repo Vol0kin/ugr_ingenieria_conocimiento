@@ -109,3 +109,28 @@
   =>
   (retract ?f)
  )
+
+(defrule obtener_informe
+  (informe ?h)
+  (Habitacion ?h)
+  =>
+  (assert (mayor_que 0 ?h))
+)
+
+(defrule valor_mayor
+  ?f <- (mayor_que ?val ?h)
+  (valor_registrado ?t ?tipo ?h ?v)
+  =>
+  (assert (mayor_que ?val menor_que ?t ?h))
+  (retract ?f)
+)
+
+(defrule valor_mayor_menor
+  ?f <- (mayor_que ?inf menor_que ?sup ?h) 
+  (valor_registrado ?t ?tipo ?h ?v)
+  (test (> ?t ?inf))
+  (test (< ?t ?sup))
+  =>
+  (assert (mayor_que ?inf menor_que ?t ?h))
+  (retract ?f)
+)
