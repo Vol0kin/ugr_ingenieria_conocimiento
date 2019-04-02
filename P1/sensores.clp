@@ -110,6 +110,7 @@
   (retract ?f)
  )
 
+; Regla para obtener el informe
 (defrule obtener_informe
   (informe ?h)
   (Habitacion ?h)
@@ -117,15 +118,22 @@
   (assert (mayor_que 0 ?h))
 )
 
+; Regla para obtener el primer valor mayor que 0 o que uno ya dado 
 (defrule valor_mayor
   ?f <- (mayor_que ?val ?h)
   (valor_registrado ?t ?tipo ?h ?v)
+  (test (> ?t ?val))
   =>
   (assert (mayor_que ?val menor_que ?t ?h))
   (retract ?f)
 )
 
+; Regla para buscar un valor de tiempo mayor que un extremo inferior pero menor
+; que un extremo superior
+; Se le da una prioridad superior para evitar que se imprima el informe antes 
+; de tiempo
 (defrule valor_mayor_menor
+  (declare (salience 1))
   ?f <- (mayor_que ?inf menor_que ?sup ?h) 
   (valor_registrado ?t ?tipo ?h ?v)
   (test (> ?t ?inf))
@@ -133,4 +141,22 @@
   =>
   (assert (mayor_que ?inf menor_que ?t ?h))
   (retract ?f)
+)
+
+; Regla para imprimir el informe
+(defrule imprimir_informe
+  ?f <- (mayor_que ?inf menor_que ?sup ?h)
+  (valor_registrado ?sup ?tipo ?h ?v)
+  =>
+  (assert (mayor_que ?sup ?h))
+  (retract ?f)
+  (printout t "Valor Registrado " ?h ": " ?sup " " ?tipo " " ?v crlf)
+)
+
+; Regla para imprimir el informe solicitado
+(defrule elimina_informe
+  (declare (salience -1))
+  ?g <- (informe ?h)
+  =>
+  (retract ?g)
 )
