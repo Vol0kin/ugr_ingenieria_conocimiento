@@ -106,3 +106,14 @@
 	=>
 	(assert (habitacion_interior ?h))
 )
+
+; Conocimiento respecto a la luminosidad de las habitaciones
+(deffacts luminosidades
+  (luminosidad Salon 300) 
+  (luminosidad Dormitorio_Principal 150)
+  (luminosidad Dormitorio_1 150)
+  (luminosidad Dormitorio_2 150)
+  (luminosidad Cocina 200)
+  (luminosidad Pasillo 200)
+  (luminosidad WC 200)
+)
