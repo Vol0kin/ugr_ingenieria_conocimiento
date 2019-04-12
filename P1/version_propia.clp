@@ -1,4 +1,5 @@
 ; Practica 1
+; Autor: Vladislav Nikolov Vasilev
 
 ; -----------------------------------------------------------------------------
 ; Apartado 1
@@ -281,6 +282,7 @@
 )
 
 ; Regla para imprimir el informe solicitado
+; Se elimina la solicitud de informe una vez se ha imprimido toda la informacion
 (defrule elimina_informe
   (declare (salience -1))
   ?g <- (informe ?h)
@@ -289,12 +291,21 @@
 )
 
 ; -----------------------------------------------------------------------------
-; Apartado 3
+; Apartado 3a
 ; -----------------------------------------------------------------------------
 
 
 ; Version propia del control de manejo inteligente de luces
 ; Version simplificada del manejo inteligente de luces de la version del experto
+
+; Esta version del control enciende las luces en una habitacion si hay movimiento 
+; y si la luminosidad es menor a la mitad de la luminosidad media 
+; Apaga las luces si hay movimiento en la habitacion pero el valor de la luminosidad 
+; es superior a la mitad o si no hay movimiento en la habitacion 
+
+; Se guarda informacion sobre la habitacion, sobre si esta encendida o apagada 
+; Solo se puede guardar un estado a la vez. Para gestionar esto, se utiliza 
+; el tiempo con los encendidos/apagados
 
 ; Regla para encender las luces en una habitacion
 ; Las luces se encienden cuando se produce un movimiento en la habitacion 

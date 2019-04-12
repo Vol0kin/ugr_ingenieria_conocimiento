@@ -1,4 +1,5 @@
 ; Practica 1
+; Autor: Vladislav Nikolov Vasilev
 
 ; -----------------------------------------------------------------------------
 ; Apartado 1
@@ -281,6 +282,7 @@
 )
 
 ; Regla para imprimir el informe solicitado
+; Se elimina la solicitud de informe una vez se ha imprimido toda la informacion
 (defrule elimina_informe
   (declare (salience -1))
   ?g <- (informe ?h)
@@ -289,7 +291,7 @@
 )
 
 ; -----------------------------------------------------------------------------
-; Apartado 3
+; Apartado 3b
 ; -----------------------------------------------------------------------------
 
 
@@ -319,7 +321,7 @@
   (assert (parece_inactiva ?h ?t))
 )
 
-; Regla para comprobar que una hbitacion esta inactiva
+; Regla para comprobar que una habitacion esta inactiva
 ; Una habitacion esta inactiva si se tardan mas de 10
 ; segundos en decidirse que no parece_inactiva
 (defrule no_activa_hab
@@ -343,7 +345,7 @@
   (retract ?f)
 )
 
-; Eliminar el parece_inactiva actual si se da una activacion 
+; Regla para eliminar el ultimo parece_inactiva si se da una activacion
 ; mas reciente que el parece_inactiva
 (defrule eliminar_parece_inactiva_h
   ?f <- (parece_inactiva ?h ?t1) 
@@ -353,7 +355,7 @@
   (retract ?f)
 )
 
-; Eliminar el parece_inactiva actual si se da un inactiva 
+; Eliminar el ulitmo parece_inactiva actual si se da un inactiva 
 ; mas reciente que el parece_inactiva
 (defrule eliminar_parece_inactiva_inactiva_h
   ?f <- (parece_inactiva ?h ?t1) 
@@ -376,6 +378,11 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;         REGLAS PARA GESTIONAR LOS PASOS
+
+; Explicacion de las prioridades:
+; -> posible_paso_hab: 10 (deducir antes todos los posibles pasos)
+; -> mas_un_paso_posible: 2 (deducir si hay mas de un posible paso)
+; -> paso_solo_una_hab: 1 (deducir si solo se ha realizado un posible paso)
 
 ; Obtener los posibles pasos desde una habitacion
 ; El razonamiento empieza cuando la habitacion parece inactiva
@@ -475,6 +482,7 @@
 
 ; Regla para encender la luz en una habitacion cuando
 ; el sensor de movimiento esta activo y hay poca luminosidad
+; (menos de la mitad de la luminosidad media)
 (defrule encender_hab_activa_poca_luz
   (Manejo_inteligente_luces ?h)
   (ultimo_registro movimiento ?h ?t)
@@ -498,8 +506,8 @@
 )
 
 ; Regla para apagar la luz en una habitacion si hay mucha luminosidad
-; aun teniendo en cuenta que el sensor de movimiento registra
-; movimiento dentro de la habitacion
+; (mas del doble de la luminosidad media) aun teniendo en cuenta que el
+; sensor de movimiento registra movimiento dentro de la habitacion
 (defrule apagar_hab_mucha_luz
   (Manejo_inteligente_luces ?h)
   (ultimo_registro movimiento ?ht ?t)
