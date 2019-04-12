@@ -22,13 +22,15 @@
 )
 
 ; TODO
-;(defrule no_activa_hab
-;  (parece_inactiva ?h ?t)
-
-;  =>
-;  (bind ?tInact (time))
-;  (assert (inactiva ?h ?tInact))
-;)
+(defrule no_activa_hab
+  (parece_inactiva ?h ?t)
+  (ultimo_registro movimiento ?h ?t2)
+  (valor_registrado ?t2 movimiento ?h off)
+  (ultima_desactivacion movimiento ?h ?tDes)
+  (test (> ?t2 (+ ?tDes 10)))
+  =>
+  (assert (inactiva ?h ?t2))
+)
 
 ; Eliminar la activacion anterior en el momento en el 
 ; que la habitacion parece inactiva, es decir, si el 
@@ -46,7 +48,7 @@
 (defrule eliminar_parece_inactiva_h
   ?f <- (parece_inactiva ?h ?t1) 
   (activa ?h ?t2)
-  (test (< ?t1 ?t2))
+  (test (<= ?t1 ?t2))
   =>
   (retract ?f)
 )
@@ -56,7 +58,7 @@
 (defrule eliminar_parece_inactiva_inactiva_h
   ?f <- (parece_inactiva ?h ?t1) 
   (inactiva ?h ?t2)
-  (test (< ?t1 ?t2))
+  (test (<= ?t1 ?t2))
   =>
   (retract ?f)
 )
@@ -66,15 +68,16 @@
 
 (defrule posible_paso_hab
   (declare (salience 10))
-  (activa ?h1 ?t1)
+  (parece_inactiva ?h1 ?t1)
   (activa ?h2 & ~?h1 ?t2)
-  (test (< ?t1 ?t2))
+  (test (> ?t1 ?t2))
   (posible_pasar ?h1 ?h2)
   =>
-  (assert (posible_paso ?h1 ?h2 ?t2))
+  (assert (posible_paso ?h1 ?h2 ?t1))
 )
 
 (defrule mas_un_posible_paso
+  (declare (salience 2))
   (posible_paso ?h1 ?h2 ?t1)
   (posible_paso ?h1 ?h3 & ~?h2 ?t2)
   =>
@@ -83,9 +86,9 @@
 )
 
 (defrule paso_solo_una_hab
-  (declare (salience -1))
+  (declare (salience 1))
   (activa ?h ?t)
-  ?f <- (posible_paso ?h2 ?h ?t)
+  ?f <- (posible_paso ?h2 ?h ?t2)
   (not (mas_un_posible_paso ?h2 ?))
   =>
   (assert (paso ?h2 ?h ?t))
@@ -98,17 +101,16 @@
   (paso ?h ? ?t2)
   (test (< ?t2 ?t))
   =>
-  (bind ?t2 (time))
-  (assert (inactiva ?h ?t2))
+  (assert (inactiva ?h ?t))
 )
 
 (defrule activa_paso_h
   (ultimo_registro movimiento ?h ?t)
   (parece_inactiva ?h ?t)
   (not (paso ?h ? ?))
+  (not (mas_un_posible_paso ?h ?))
   =>
-  (bind ?t2 (time))
-  (assert (activa ?h ?t2))
+  (assert (activa ?h ?t))
 )
 
 (defrule eliminar_posible_paso_ant
@@ -138,8 +140,79 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;         REGLAS PARA GESTIONAR LOS ESTADOS DE LAS LUCES
 
-;(defrule activar_luz
-;  (activa ?h) 
-;  (ultimo_registro movimiento ?h ?t)
-;  (valor_registrado ?t luminosidad ?l)
-;)
+(defrule encender_hab_activa_poca_luz
+  (Manejo_inteligente_luces ?h)
+  (ultimo_registro movimiento ?h ?t)
+  (activa ?h ?t) 
+  (ultimo_registro estadoluz ?h ?t2)
+  (valor_registrado ?t2 estadoluz ?h off)
+  (ultimo_registro luminosidad ?h ?t3)
+  (valor_registrado ?t3 luminosidad ?h ?l)
+  (luminosidad ?h ?lux)
+  (test (< ?l (/ ?lux 2)))
+  =>
+  (assert (encender_luz ?h ?t))
+)
+
+(defrule apagar_hab_inactiva
+  (Manejo_inteligente_luces ?h)
+  (ultimo_registro movimiento ?h ?t)
+  (inactiva ?h ?t)
+  (ultimo_registro estadoluz ?h ?t2)
+  (valor_registrado ?t2 estadoluz ?h on)
+  =>
+  (assert (apagar_luz ?h ?t))
+)
+
+(defrule apagar_hab_mucha_luz
+  (Manejo_inteligente_luces ?h)
+  (ultimo_registro movimiento ?ht ?t)
+  (activa ?h ?t)
+  (ultimo_registro estadoluz ?h ?t2)
+  (valor_registrado ?t2 estadoluz ?h on)
+  (ultimo_registro luminosidad ?h ?t3)
+  (valor_registrado ?t3 luminosidad ?h ?l)
+  (luminosidad ?h ?lux)
+  (test (> ?l (* ?lux 2)))
+  =>
+  (assert (apagar_luz ?h ?t3))
+)
+
+; Regla para eliminar el anterior encendido de las luces, basandose en
+; el tiempo de estos
+(defrule eliminar_encender_ant
+  (declare (salience 1))
+  ?f <- (encender_luz ?hab ?t1) 
+  ?g <- (accion pulsador_luz ?hab encender)
+  (encender_luz ?hab ?t2)
+  (test (< ?t1 ?t2))
+  =>
+  (retract ?f)
+  (retract ?g)
+)
+
+; Regla para eliminar el anterior apagado de las luces, basandose en 
+; el tiempo de estos
+(defrule eliminar_apagar_ant
+  (declare (salience 1)) 
+  ?f <- (apagar_luz ?hab ?t1)
+  ?g <- (accion pulsador_luz ?hab apagar)
+  (apagar_luz ?hab ?t2)
+  (test (< ?t1 ?t2))
+  =>
+  (retract ?f)
+  (retract ?g)
+)
+; Regla para insertar la accion de encender la luz con el pulsador
+(defrule encender_interruptor
+  (encender_luz ?hab ?t) 
+  =>
+  (assert (accion pulsador_luz ?hab encender))
+)
+
+; Regla para insertar la accion de apagar la luz con el pulsador
+(defrule apagar_interruptor
+  (apagar_luz ?hab ?t) 
+  =>
+  (assert (accion pulsador_luz ?hab apagar))
+)

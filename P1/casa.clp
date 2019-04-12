@@ -116,4 +116,5 @@
   (luminosidad Cocina 200)
   (luminosidad Pasillo 200)
   (luminosidad WC 200)
+  (luminosidad Despacho 500)
 )
