@@ -1,4 +1,4 @@
-; Apartado a)
+; Ejercicio 1a
 
 ; Hechos iniciales
 (deffacts habitaciones

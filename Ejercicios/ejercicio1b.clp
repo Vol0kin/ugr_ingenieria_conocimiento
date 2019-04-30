@@ -1,4 +1,4 @@
-; Apartado b
+; Ejercicio 1b
 
 ; Insertar hecho inicial
 ; Inicializar contador a 0
