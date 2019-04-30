@@ -17,7 +17,8 @@
 )
 
 ; Buscar el minimo
-; Ir buscando las edades de las personas que sean menores que el minimo
+; Ir buscando las edades de las personas que sean menores que el valor minimo
+; actual
 (defrule minX2Persona
   ?f <- (edad_minima ?e1)
   (Persona ? ?e2)
