@@ -9,91 +9,168 @@
 	(Tiesto Palmera)
 )
 
-; Definicion de valores minimios de humedad
+; Definicion de valores minimios de humedad de las plantas
+; El valor de humedad ideal esta entre el minimo y el maximo
 (deffacts HumedadesMin
-	(HumedadMin Cactus 15)
-	(HumedadMin Tulipan 45)
-	(HumedadMin Palmera 40)
+	(HumedadMin Cactus 800)
+	(HumedadMin Tulipan 750)
+	(HumedadMin Palmera 700)
 )
 
 ; Definicion de valores maximos de humedad
+; El valor de humedad ideal esta entre el minimo y el maximo
 (deffacts HumedadesMax
-	(HumedadMax Cactus 50)
-	(HumedadMax Tulipan 60)
-	(HumedadMax Palmera 70)
+	(HumedadMax Cactus 600)
+	(HumedadMax Tulipan 400)
+	(HumedadMax Palmera 300)
 )
 
 ; Definicion de valores criticos de humedad
-; Si un tiesto baja de esta cantidad, tiene que ser regado
+; Si un tiesto baja de esta cantidad, tiene que ser regado obligatoriamente
 (deffacts HumedadCritica
-	(HumedadCrit Cactus 10)
-	(HumedadCrit Tulipan 35)
-	(HumedadCrit Palmera 25)
+	(HumedadCrit Cactus 950)
+	(HumedadCrit Tulipan 800)
+	(HumedadCrit Palmera 750)
 )
 
-; Definicion de las humedades iniciales
-(deffacts HumedadesInit
-	(Humedad Cactus 35)
-	(Humedad Tulipan 55)
-	(Humedad Palmera 65)
+; Definicion de valores minimos de temperatura para las plantas
+; El valor de temperatura ideal esta entre el minimo y el maximo
+(deffacts TemperaturaMin
+	(TemperaturaMin Cactus 15)
+	(TemperaturaMin Tulipan 20)
+	(TemperaturaMin Palmera 22)
 )
 
-; Definicion de las luminosidades iniciales
-(deffacts LuminosidadesInit
-	(Luminosidad Cactus 200)
-	(Luminosidad Tulipan 195)
-	(Luminosidad Palmera 200)
+; Definicion de valores maximos de temperatura para las plantas
+; El valor de temperatura ideal esta entre el minimo y el maximo
+(deffacts TemperaturaMax
+	(TemperaturaMax Cactus 45)
+	(TemperaturaMax Tulipan 27)
+	(TemperaturaMax Palmera 30)
 )
 
-; Definicion de las temperaturas iniciales de los Tiestos
-(deffacts TemperaturasInit
-	(Temperatura Cactus 28)
-	(Temperatura Tulipan 24)
-	(Temperatura Palmera 30)
+; Definicion de valores criticos de temperatura para las plantas
+; A partir de este valor sera necesario vaporizar las plantas debido a las
+; altas temperaturas a las que estan sometidas
+(deffacts TemperaturaCrit
+	(TemperaturaCrit Cactus 50)
+	(TemperaturaCrit Tulipan 30)
+	(TemperaturaCrit Palmera 37)
+)
+
+; Definicion de valores minimos de luminosidad para las plantas
+; El valor de lumnosidad ideal esta entre el minimo y el maximo
+; Esto indica que, si se excede este rango, es mas dificil que se de
+; la posibilidad de regar la planta hasta que descienda a valors ideales
+(deffacts LuzMin
+	(LuminosidadMin Cactus 300)
+	(LuminosidadMin Tulipan 250)
+	(LuminosidadMin Palmera 350)
+)
+
+; Definicion de valores maximos de luminosidad para las plantas
+; El valor de luminosidad ideal esta entre el minimo y el maximo
+; Esto indica que, si se excede este rango, es mas dificil que se de
+; la posibilidad de regar la planta hasta que descienda a valors ideales
+(deffacts LuzMax
+	(LuminosidadMax Cactus 650)
+	(LuminosidadMax Tulipan 560)
+	(LuminosidadMax Palmera 600)
+)
+
+; Definicion de valores criticos de luminosidad para las plantas
+; A partir de este valor no se podra regar la planta hasta que no se vea
+; reducido a algun valor de luminosidad en el rango ideal
+(deffacts LuzCrit
+	(LuminosidadCrit Cactus 800)
+	(LuminosidadCrit Tulipan 600)
+	(LuminosidadCrit Palmera 740)
+)
+
+; Definicion de la cantidad de humedad que aporta el riego
+(deffacts CantidadHumedadRecibida
+	(Regado 100)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Regla para bajar la humedad de una planta
-(defrule deshumidificar
-	?g <- (deshumidificar ?p ?hum2)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Reglas para gestionar los datos de entrada de los sensores
+
+; Regla para incluir un nuevo valor_registrado
+; Inserta tambien un nuevo ultimo_registro
+; El tiesto tiene que ser uno de los definidos
+(defrule nuevo_registro
+	(declare (salience 20))
+	(valor ?tipo ?p ?v)
 	(Tiesto ?p)
-	?f <- (Humedad ?p ?hum)
 	=>
-	(bind ?newHum (- ?hum ?hum2))
-	(printout t "Reduciendo la humedad de " ?p ". Pasa de una humedad de " ?hum " a " ?newHum crlf)
-	(retract ?f)
-	(retract ?g)
-	(assert (Humedad ?p ?newHum))
+	(bind ?t (time))
+	(printout t "Registrado nuevo valor de tipo " ?tipo " para la planta " ?p " con valor " ?v crlf)
+	(assert (valor_registrado ?t ?tipo ?p ?v))
+	(assert (ultimo_registro ?tipo ?p ?t))
 )
 
+; Regla para eliminar el anterior ultimo_registro
+; del mismo tipo para un tiesto segun el tiempo
+(defrule ultimo_reg
+	(declare (salience 15))
+	?f <- (ultimo_registro ?tipo ?p ?t1)
+	(ultimo_registro ?tipo ?p ?t2)
+	(test (< ?t1 ?t2))
+	=>
+	(retract ?f)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Regla encargada de deducir cual es el momento mas adecuado para regar
 ; las plantas. Normalmente lo hace cuando se baja del valor de HumedadCrit
 ; que tiene asociada la planta
 (defrule calcularRegarPlanta
+	(ultimo_registro Humedad ?p ?t)
 	(Tiesto ?p)
-	(Humedad ?p ?hum)
+	(valor_registrado ?t Humedad ?p ?hum)
 	(HumedadCrit ?p ?crit)
-	(test (< ?hum ?crit))
+	(HumedadMax ?p ?max)
+	(test (> ?hum ?crit))
+	(not (regar ?p ?))
 	=>
 	(printout t "La humedad de " ?p " es de " ?hum ", valor por debajo del critico " ?crit crlf)
-	(assert (regar ?p))
+	(printout t "Se decide regar la planta " ?p " hasta alcanzar una humedad de " ?max crlf)
+	(assert (regar ?p ?max))
 )
 
 ; Regla para regar las plantas
 ; Modifica el valor de humedad de la planta
 (defrule regarPlanta
-	?f <- (regar ?p)
-	?g <- (Humedad ?p ?hum)
-	(HumedadMax ?p ?max)
-	(HumedadMin ?p ?min)
+	(regar ?p ?humObj)
+	(Regado ?inc)
+	(ultimo_registro Humedad ?p ?t)
+	(valor_registrado ?t Humedad ?p ?hum)
 	=>
-	(bind ?rango (- ?max ?min))
-	(bind ?newHum (+ (mod (random) ?rango) ?min))
-	(printout t "Regando " ?p ". Su nueva humedad pasa a ser " ?newHum crlf)
+	(bind ?dif (- ?hum ?humObj))
+	(bind ?cantRegado (min ?inc ?dif))
+	(bind ?newHum (- ?hum ?cantRegado))
+	(printout t "Regando " ?p ". Se incrementa su humedad en " ?cantRegado crlf)
+	(assert (valor Humedad ?p ?newHum))
+)
+
+; Regla para detener el regado de la planta
+; Detiene el regado de las plantas una vez que se ha llegado al valor objetivo
+; o se ha excedido
+(defrule detenerRegarPlanta
+	(declare (salience 10))
+	?f <- (regar ?p ?humObj)
+	(ultimo_registro Humedad ?p ?t)
+	(valor_registrado ?t Humedad ?p ?hum)
+	(test (<= ?hum ?humObj))
+	=>
 	(retract ?f)
-	(retract ?g)
-	(assert (Humedad ?p ?newHum))
 )
