@@ -92,6 +92,12 @@
 	(Regado 100)
 )
 
+(deffacts RegadoInit
+	(regar Cactus off)
+	(regar Tulipan off)
+	(regar Palmera off)
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -136,21 +142,22 @@
 (defrule calcularRegarPlanta
 	(ultimo_registro Humedad ?p ?t)
 	(Tiesto ?p)
+	?f <- (regar ?p off)
 	(valor_registrado ?t Humedad ?p ?hum)
 	(HumedadCrit ?p ?crit)
 	(HumedadMax ?p ?max)
 	(test (> ?hum ?crit))
-	(not (regar ?p ?))
 	=>
 	(printout t "La humedad de " ?p " es de " ?hum ", valor por debajo del critico " ?crit crlf)
 	(printout t "Se decide regar la planta " ?p " hasta alcanzar una humedad de " ?max crlf)
-	(assert (regar ?p ?max))
+	(retract ?f)
+	(assert (regar ?p on ?max))
 )
 
 ; Regla para regar las plantas
 ; Modifica el valor de humedad de la planta
 (defrule regarPlanta
-	(regar ?p ?humObj)
+	(regar ?p on ?humObj)
 	(Regado ?inc)
 	(ultimo_registro Humedad ?p ?t)
 	(valor_registrado ?t Humedad ?p ?hum)
@@ -167,10 +174,11 @@
 ; o se ha excedido
 (defrule detenerRegarPlanta
 	(declare (salience 10))
-	?f <- (regar ?p ?humObj)
+	?f <- (regar ?p on ?humObj)
 	(ultimo_registro Humedad ?p ?t)
 	(valor_registrado ?t Humedad ?p ?hum)
 	(test (<= ?hum ?humObj))
 	=>
 	(retract ?f)
+	(assert (regar ?p off))
 )
