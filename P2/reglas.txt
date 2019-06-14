@@ -1,0 +1,11 @@
+Si HUMEDAD baja y LUMINOSIDAD baja y TEMPERATURA baja -> regar poco
+Si HUMEDAD baja y LUMINOSIDAD baja y TEMPERATURA media -> regar medio
+Si HUMEDAD baja y LUMINOSIDAD baja y TEMPERATURA alta -> regar poco
+
+Si HUMEDAD baja y LUMINOSIDAD media y TEMPERATURA baja -> regar medio
+Si HUMEDAD baja y LUMINOSIDAD media y TEMPERATURA media -> regar alto
+Si HUMEDAD baja y LUMINOSIDAD media y TEMPERATURA alta -> regar poco
+
+Si HUMEDAD baja y LUMINOSIDAD alta y TEMPERATURA baja -> regar poco
+Si HUMEDAD baja y LUMINOSIDAD alta y TEMPERATURA media -> regar medio
+Si HUMEDAD baja y LUMINOSIDAD alta y TEMPERATURA alta -> regar poco

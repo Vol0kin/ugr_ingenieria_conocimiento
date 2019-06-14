@@ -113,13 +113,14 @@
 ; El tiesto tiene que ser uno de los definidos
 (defrule nuevo_registro
 	(declare (salience 20))
-	(valor ?tipo ?p ?v)
+	?f <- (valor ?tipo ?p ?v)
 	(Tiesto ?p)
 	=>
 	(bind ?t (time))
 	(printout t "Registrado nuevo valor de tipo " ?tipo " para la planta " ?p " con valor " ?v crlf)
 	(assert (valor_registrado ?t ?tipo ?p ?v))
 	(assert (ultimo_registro ?tipo ?p ?t))
+	(retract ?f)
 )
 
 ; Regla para eliminar el anterior ultimo_registro
@@ -179,6 +180,7 @@
 	(valor_registrado ?t Humedad ?p ?hum)
 	(test (<= ?hum ?humObj))
 	=>
+	(printout t "Se deja de regar la planta " ?p " porque ha llegado a su humedad ideal" crlf)
 	(retract ?f)
 	(assert (regar ?p off))
 )
