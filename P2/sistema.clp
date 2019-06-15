@@ -53,7 +53,7 @@
 ; A partir de este valor sera necesario vaporizar las plantas debido a las
 ; altas temperaturas a las que estan sometidas
 (deffacts TemperaturaCrit
-	(TemperaturaCrit Cactus 50)
+	(TemperaturaCrit Cactus 60)
 	(TemperaturaCrit Tulipan 30)
 	(TemperaturaCrit Palmera 37)
 )
@@ -76,15 +76,6 @@
 	(LuminosidadMax Cactus 650)
 	(LuminosidadMax Tulipan 560)
 	(LuminosidadMax Palmera 600)
-)
-
-; Definicion de valores criticos de luminosidad para las plantas
-; A partir de este valor no se podra regar la planta hasta que no se vea
-; reducido a algun valor de luminosidad en el rango ideal
-(deffacts LuzCrit
-	(LuminosidadCrit Cactus 800)
-	(LuminosidadCrit Tulipan 600)
-	(LuminosidadCrit Palmera 740)
 )
 
 ; Definicion de la cantidad de humedad que aporta el riego
@@ -141,18 +132,94 @@
 ; las plantas. Normalmente lo hace cuando se baja del valor de HumedadCrit
 ; que tiene asociada la planta
 (defrule calcularRegarPlanta
-	(ultimo_registro Humedad ?p ?t)
+	(regar ?p off)
 	(Tiesto ?p)
-	?f <- (regar ?p off)
+
+	(ultimo_registro Humedad ?p ?t)
 	(valor_registrado ?t Humedad ?p ?hum)
-	(HumedadCrit ?p ?crit)
-	(HumedadMax ?p ?max)
-	(test (> ?hum ?crit))
+
+	(ultimo_registro Temperatura ?p ?t2)
+	(valor_registrado ?t2 Temperatura ?p ?tmp)
+
+	(ultimo_registro Luminosidad ?p ?t3)
+	(valor_registrado ?t3 Luminosidad ?p ?lum)
+
+	(HumedadMin ?p ?humMin)
+	(HumedadMax ?p ?humMax)
+	(HumedadCrit ?p ?humCrit)
+	(TemperaturaMin ?p ?tmpMin)
+	(TemperaturaMax ?p ?tmpMax)
+	(TemperaturaCrit ?p ?tmpCrit)
+	(LuminosidadMin ?p ?lumMin)
+	(LuminosidadMax ?p ?lumMax)
 	=>
-	(printout t "La humedad de " ?p " es de " ?hum ", valor por debajo del critico " ?crit crlf)
-	(printout t "Se decide regar la planta " ?p " hasta alcanzar una humedad de " ?max crlf)
+	(printout t "El sistema va a razonar sobre la necesidad de regar o no la planta " ?p "..." crlf)
+
+	(open "DatosSistema.txt" data "w")
+	(printout data ?humMin " " ?humMax " " ?humCrit " " ?tmpMin " " ?tmpMax " "
+		?tmpCrit " " ?lumMin " " ?lumMax " " ?hum " " ?tmp " " ?lum crlf)
+	(close data)
+
+	(system "python3 fuzzy.py")
+
+	(open "DatosDeducidos.txt" data)
+	(bind ?l1 (read data))
+	(bind ?l2 (read data))
+	(bind ?l3 (read data))
+	(close data)
+
+	(printout t "El sistema ha deducido lo siguiente sobre el riego de la planta" ?p ":" crlf)
+	(printout t "Activacion/Intensidad del riego: " ?l2 crlf)
+	(printout t "Valor de humedad ideal a conseguir: " ?l3 crlf)
+	(assert (riego ?p ?l2 ?l3))
+)
+
+(defrule riegoNo
+	(declare (salience 10))
+	?f <- (riego ?p no ?)
+	=>
+	(printout t "El sistema ha decidido no regar la planta " ?p " debido a que su humedad
+	estaba en el rango ideal de humedad o era superior a este" crlf)
 	(retract ?f)
-	(assert (regar ?p on ?max))
+)
+
+(defrule riegoBajo
+	(declare (salience 10))
+	?f <- (riego ?p bajo ?humIdeal)
+	?g <- (regar ?p off)
+	=>
+	(printout t "El sistema ha decidido realizar un riego de baja intensidad para la planta " ?p "
+	debido a que su humedad era baja y las condiciones de luminosidad/temperatura
+	no le son favorables" crlf)
+	(assert (regar ?p on ?humIdeal))
+	(retract ?f)
+	(retract ?g)
+)
+
+(defrule riegoMedio
+	(declare (salience 10))
+	?f <- (riego ?p medio ?humIdeal)
+	?g <- (regar ?p off)
+	=>
+	(printout t "El sistema ha decidido realizar un riego de intensidad media para la planta " ?p "
+	debido a que su humedad era baja y las condiciones de luminosidad/temperatura
+	le eran un poco favorables" crlf)
+	(assert (regar ?p on ?humIdeal))
+	(retract ?f)
+	(retract ?g)
+)
+
+(defrule riegoAlto
+	(declare (salience 10))
+	?f <- (riego ?p alto ?humIdeal)
+	?g <- (regar ?p off)
+	=>
+	(printout t "El sistema ha decidido realizar un riego de alta intensidad para la planta " ?p "
+	debido a que su humedad era baja y las condiciones de luminosidad/temperatura
+	le son favorables" crlf)
+	(assert (regar ?p on ?humIdeal))
+	(retract ?f)
+	(retract ?g)
 )
 
 ; Regla para regar las plantas
