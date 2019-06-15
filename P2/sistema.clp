@@ -83,11 +83,26 @@
 	(Regado 100)
 )
 
+; Valores iniciales de los sistemas de riego (desactivados)
 (deffacts RegadoInit
 	(regar Cactus off)
 	(regar Tulipan off)
 	(regar Palmera off)
 )
+
+; Definicion de la cantidad de temperatura que reduce el vaporizador
+; por cada vez que se activa
+(deffacts CantidadTemperaturaReducida
+	(Vaporizado 2)
+)
+
+; Valores iniciales de los sistemas de vaporizacion (desactivados)
+(deffacts VaporizadoresInit
+	(vaporizador Cactus off)
+	(vaporizador Tulipan off)
+	(vaporizador Palmera off)
+)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -103,12 +118,12 @@
 ; Inserta tambien un nuevo ultimo_registro
 ; El tiesto tiene que ser uno de los definidos
 (defrule nuevo_registro
-	(declare (salience 20))
+	(declare (salience 50))
 	?f <- (valor ?tipo ?p ?v)
 	(Tiesto ?p)
 	=>
 	(bind ?t (time))
-	(printout t "Registrado nuevo valor de tipo " ?tipo " para la planta " ?p " con valor " ?v crlf)
+	(printout t crlf "Registrado nuevo valor de tipo " ?tipo " para la planta " ?p " con valor " ?v crlf)
 	(assert (valor_registrado ?t ?tipo ?p ?v))
 	(assert (ultimo_registro ?tipo ?p ?t))
 	(retract ?f)
@@ -117,7 +132,7 @@
 ; Regla para eliminar el anterior ultimo_registro
 ; del mismo tipo para un tiesto segun el tiempo
 (defrule ultimo_reg
-	(declare (salience 15))
+	(declare (salience 40))
 	?f <- (ultimo_registro ?tipo ?p ?t1)
 	(ultimo_registro ?tipo ?p ?t2)
 	(test (< ?t1 ?t2))
@@ -125,15 +140,27 @@
 	(retract ?f)
 )
 
+(defrule eliminarEsperarHumedad
+	(declare (salience 30))
+	?f <- (esperar_humedad ?p ?t1)
+	(ultimo_registro Humedad ?p ?t2)
+	(test (!= ?t1 ?t2))
+	=>
+	(retract ?f)
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Reglas para gestionar el riego de las plantas
 
 ; Regla encargada de deducir cual es el momento mas adecuado para regar
 ; las plantas. Normalmente lo hace cuando se baja del valor de HumedadCrit
 ; que tiene asociada la planta
 (defrule calcularRegarPlanta
 	(regar ?p off)
+	(vaporizador ?p off)
 	(Tiesto ?p)
+	(not (esperar_humedad ?p ?))
 
 	(ultimo_registro Humedad ?p ?t)
 	(valor_registrado ?t Humedad ?p ?hum)
@@ -153,7 +180,7 @@
 	(LuminosidadMin ?p ?lumMin)
 	(LuminosidadMax ?p ?lumMax)
 	=>
-	(printout t "El sistema va a razonar sobre la necesidad de regar o no la planta " ?p "..." crlf)
+	(printout t crlf "El sistema va a razonar sobre la necesidad de regar o no la planta " ?p "..." crlf)
 
 	(open "DatosSistema.txt" data "w")
 	(printout data ?humMin " " ?humMax " " ?humCrit " " ?tmpMin " " ?tmpMax " "
@@ -172,51 +199,53 @@
 	(printout t "Activacion/Intensidad del riego: " ?l2 crlf)
 	(printout t "Valor de humedad ideal a conseguir: " ?l3 crlf)
 	(assert (riego ?p ?l2 ?l3))
+	(assert (modulo Riego))
 )
 
 (defrule riegoNo
-	(declare (salience 10))
-	?f <- (riego ?p no ?)
+	?f <- (modulo Riego)
+	?g <- (riego ?p no ?)
 	=>
-	(printout t "El sistema ha decidido no regar la planta " ?p " debido a que su humedad
-	estaba en el rango ideal de humedad o era superior a este" crlf)
+	(printout t crlf "El sistema ha decidido no regar la planta " ?p " debido a que su humedad "
+	"estaba en el rango ideal de humedad o era superior a este" crlf)
 	(retract ?f)
+	(retract ?g)
 )
 
 (defrule riegoBajo
-	(declare (salience 10))
+	(modulo Riego)
 	?f <- (riego ?p bajo ?humIdeal)
 	?g <- (regar ?p off)
 	=>
-	(printout t "El sistema ha decidido realizar un riego de baja intensidad para la planta " ?p "
-	debido a que su humedad era baja y las condiciones de luminosidad/temperatura
-	no le son favorables" crlf)
+	(printout t crlf "El sistema ha decidido realizar un riego de baja intensidad para la planta " ?p
+	" debido a que su humedad era baja y las condiciones de luminosidad/temperatura "
+	"no le son favorables" crlf)
 	(assert (regar ?p on ?humIdeal))
 	(retract ?f)
 	(retract ?g)
 )
 
 (defrule riegoMedio
-	(declare (salience 10))
+	(modulo Riego)
 	?f <- (riego ?p medio ?humIdeal)
 	?g <- (regar ?p off)
 	=>
-	(printout t "El sistema ha decidido realizar un riego de intensidad media para la planta " ?p "
-	debido a que su humedad era baja y las condiciones de luminosidad/temperatura
-	le eran un poco favorables" crlf)
+	(printout t crlf "El sistema ha decidido realizar un riego de intensidad media para la planta " ?p
+	" debido a que su humedad era baja y las condiciones de luminosidad/temperatura "
+	"le eran un poco favorables" crlf)
 	(assert (regar ?p on ?humIdeal))
 	(retract ?f)
 	(retract ?g)
 )
 
 (defrule riegoAlto
-	(declare (salience 10))
+	(modulo Riego)
 	?f <- (riego ?p alto ?humIdeal)
 	?g <- (regar ?p off)
 	=>
-	(printout t "El sistema ha decidido realizar un riego de alta intensidad para la planta " ?p "
-	debido a que su humedad era baja y las condiciones de luminosidad/temperatura
-	le son favorables" crlf)
+	(printout t crlf "El sistema ha decidido realizar un riego de alta intensidad para la planta " ?p
+	" debido a que su humedad era baja y las condiciones de luminosidad/temperatura "
+	"le son favorables" crlf)
 	(assert (regar ?p on ?humIdeal))
 	(retract ?f)
 	(retract ?g)
@@ -225,6 +254,7 @@
 ; Regla para regar las plantas
 ; Modifica el valor de humedad de la planta
 (defrule regarPlanta
+	(modulo Riego)
 	(regar ?p on ?humObj)
 	(Regado ?inc)
 	(ultimo_registro Humedad ?p ?t)
@@ -233,7 +263,7 @@
 	(bind ?dif (- ?hum ?humObj))
 	(bind ?cantRegado (min ?inc ?dif))
 	(bind ?newHum (- ?hum ?cantRegado))
-	(printout t "Regando " ?p ". Se incrementa su humedad en " ?cantRegado crlf)
+	(printout t crlf "Regando " ?p ". Se incrementa su humedad en " ?cantRegado crlf)
 	(assert (valor Humedad ?p ?newHum))
 )
 
@@ -242,12 +272,77 @@
 ; o se ha excedido
 (defrule detenerRegarPlanta
 	(declare (salience 10))
-	?f <- (regar ?p on ?humObj)
+	?f <- (modulo Riego)
+	?g <- (regar ?p on ?humObj)
 	(ultimo_registro Humedad ?p ?t)
 	(valor_registrado ?t Humedad ?p ?hum)
 	(test (<= ?hum ?humObj))
 	=>
-	(printout t "Se deja de regar la planta " ?p " porque ha llegado a su humedad ideal" crlf)
+	(printout t crlf "Se deja de regar la planta " ?p " porque ha llegado a "
+	"la humedad adecuada, con un valor de " ?hum crlf)
 	(retract ?f)
+	(retract ?g)
 	(assert (regar ?p off))
+	(assert (esperar_humedad ?p ?t))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Reglas para gestionar la vaporizacion de las plantas
+
+(defrule calcularVaporizarPlanta
+	(declare (salience 10))
+	(regar ?p off)
+	?f <- (vaporizador ?p off)
+	(ultimo_registro Temperatura ?p ?t)
+	(valor_registrado ?t Temperatura ?p ?temp)
+	(TemperaturaCrit ?p ?crit)
+	(TemperaturaMin ?p ?min)
+	(TemperaturaMax ?p ?max)
+	(test (> ?temp ?crit))
+	=>
+	(printout t crlf "El sistema ha detectado que la temperatura del tiesto de la "
+	"planta " ?p " es de " ?temp "ºC, valor por encima del maximo permitido "
+	?crit "ºC." crlf)
+	(bind ?tempIdeal (integer (/ (+ ?max ?min) 2)))
+	(printout t "El sistema ha decidido vaporizar la planta " ?p " para reducir "
+	"su temperatura a " ?tempIdeal "ºC, valor que se encuentra en el rango de "
+	"temperatura ideal" crlf)
+	(retract ?f)
+	(assert (vaporizador ?p on ?tempIdeal))
+	(assert (modulo Vaporizacion))
+)
+
+; Regla para regar las plantas
+; Modifica el valor de humedad de la planta
+(defrule vaporizarPlanta
+	(modulo Vaporizacion)
+	(vaporizador ?p on ?tempIdeal)
+	(Vaporizado ?cambio)
+	(ultimo_registro Temperatura ?p ?t)
+	(valor_registrado ?t Temperatura ?p ?temp)
+	=>
+	(bind ?dif (- ?temp ?tempIdeal))
+	(bind ?cantReducido (min ?cambio ?dif))
+	(bind ?newTemp (- ?temp ?cantReducido))
+	(printout t crlf "Reduciendo la temperatura de " ?p " en " ?cantReducido "ºC" crlf)
+	(assert (valor Temperatura ?p ?newTemp))
+)
+
+; Regla para detener el regado de la planta
+; Detiene el regado de las plantas una vez que se ha llegado al valor objetivo
+; o se ha excedido
+(defrule detenerVaporizadoPlanta
+	(declare (salience 10))
+	?f <- (modulo Vaporizacion)
+	?g <- (vaporizador ?p on ?tempIdeal)
+	(ultimo_registro Temperatura ?p ?t)
+	(valor_registrado ?t Temperatura ?p ?temp)
+	(test (<= ?temp ?tempIdeal))
+	=>
+	(printout t crlf "Se deja de vaporizar la planta " ?p " porque ha llegado a "
+	"la temperatura adecuada, con un valor de " ?tempIdeal "ºC" crlf)
+	(retract ?f)
+	(retract ?g)
+	(assert (vaporizador ?p off))
 )
