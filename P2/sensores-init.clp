@@ -1,4 +1,6 @@
 
+; Autor: Vladislav Nikolov Vasilev
+
 ; Valores iniciales de los sensores
 (deffacts SensoresInit
 	(valor Temperatura Cactus 40)

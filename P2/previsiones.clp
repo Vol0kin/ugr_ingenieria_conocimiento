@@ -1,6 +1,9 @@
 
+; Autor: Vladislav Nikolov Vasilev
+
+; Valores iniciales de las previsiones de lluvia por hora
 (deffacts PrevisionesInit
-	(prevision_lluvia 9 1)
+	(prevision_lluvia 9 10)
 	(prevision_lluvia 10 0)
 	(prevision_lluvia 11 0)
 	(prevision_lluvia 12 0)
