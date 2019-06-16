@@ -103,6 +103,17 @@
 	(vaporizador Palmera off)
 )
 
+; Valor inicial de la hora (se establece que son las 8 de la mañana)
+; Las horas son enteros en el rango [0, 23] que se van repitiendo
+(deffacts HoraInit
+	(hora 8)
+)
+
+; Valor inicial asignado al estado de lluvia actual
+; Se determina que actualmente no esta lloviendo
+(deffacts LluviaInit
+	(LluviaActual no)
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -140,6 +151,12 @@
 	(retract ?f)
 )
 
+; Regla para eliminar la espera impuesta al sistema para que le llegue
+; una nueva humedad
+; El sistema tiene que esperar a recibir un nuevo valor de humedad antes
+; de volver a intentar deducir si tiene o no que regar
+; Con esta regla se elimina este hecho y se permite al sistema deducir si regar
+; o no
 (defrule eliminarEsperarHumedad
 	(declare (salience 30))
 	?f <- (esperar_humedad ?p ?t1)
@@ -147,6 +164,126 @@
 	(test (!= ?t1 ?t2))
 	=>
 	(retract ?f)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Reglas para gestionar las horas y las predicciones
+
+; Regla para adelantar una hora el tiempo
+; Incrementa la hora actual en una hora
+(defrule siguienteHora
+	?f <- (siguiente_hora)
+	?g <- (hora ?h)
+	=>
+	(bind ?nuevaHora (mod (+ ?h 1) 24))
+	(printout t crlf "Se ha adelantado la hora. Ahora son las " ?nuevaHora " horas." crlf)
+	(retract ?f)
+	(retract ?g)
+	(assert (hora ?nuevaHora))
+)
+
+; Regla para cambiar la hora a la deseada
+; Se establece la hora a la deseada
+(defrule adelantarTiempo
+	?f <- (cambiar_hora ?nuevaHora)
+	?g <- (hora ?h)
+	=>
+	(printout t crlf "Se ha cambiado la hora manualmente. Ahora son las " ?nuevaHora " horas." crlf)
+	(retract ?g)
+	(assert (hora ?nuevaHora))
+	(retract ?f)
+)
+
+; Regla para determinar si no hay lluvia prevista
+; Se considera que no va a llover si la intensidad esta entre [0.0, 0.2) mm/h
+(defrule calcularNoLluvia
+	?f <- (prediccion_lluvia ?h ?int)
+	(test (and (<= 0.0 ?int) (< ?int 0.2)))
+	=>
+	(printout t crlf "Se prevee que no habra lluvia a las " ?h " horas" crlf)
+	(assert (LluviaPrevista ?h no))
+	(retract ?f)
+)
+
+; Regla para determinar si la lluvia prevista es debil
+; Una lluvia debil tiene una intesidad de [0.2, 6.5) mm/h
+(defrule calcularLluviaDebil
+	?f <- (prediccion_lluvia ?h ?int)
+	(test (and (<= 0.2 ?int) (< ?int 6.5)))
+	=>
+	(printout t crlf "Se prevee que habra lluvia debil a las " ?h " horas" crlf)
+	(assert (LluviaPrevista ?h debil ?int))
+	(retract ?f)
+)
+
+; Regla para determinar si la lluvia prevista es moderada
+; Una lluvia moderada tiene una intesidad de [6.5, 15) mm/h
+(defrule calcularLluviaMedio
+	?f <- (prediccion_lluvia ?h ?int)
+	(test (and (<= 6.5 ?int) (< ?int 15)))
+	=>
+	(printout t crlf "Se prevee que habra lluvia moderada a las " ?h " horas" crlf)
+	(assert (LluviaPrevista ?h moderada ?int))
+	(retract ?f)
+)
+
+; Regla para determinar si la lluvia prevista es fuerte
+; Una lluvia fuerte tiene una intesidad de [15, 100) mm/h
+(defrule calcularLluviaFuerte
+	?f <- (prediccion_lluvia ?h ?int)
+	(test (and (<= 15 ?int) (< ?int 100)))
+	=>
+	(printout t crlf "Se prevee que habra lluvia fuerte a las " ?h " horas" crlf)
+	(assert (LluviaPrevista ?h fuerte ?int))
+	(retract ?f)
+)
+
+; Regla para determinar si la lluvia prevista es torrencial
+; Una lluvia torrencial tiene una intesidad de [100, infinito) mm/h
+(defrule calcularLluviaTorrencial
+	?f <- (prediccion_lluvia ?h ?int)
+	(test (<= 100 ?int))
+	=>
+	(printout t crlf "Se prevee que habra lluvia torrencial a las " ?h " horas" crlf)
+	(assert (LluviaPrevista ?h torrencial ?int))
+	(retract ?f)
+)
+
+; Regla para modificar el valor de una prediccion
+(defrule modificarPrediccionLluvia
+	?f <- (modificar_prediccion ?h ?intNueva)
+	?g <- (LluviaPrevista ?h ? ?int)
+	=>
+	(printout t crlf "Se va a modificar la pradiccion de las " ?h " horas" crlf)
+	(assert (prediccion_lluvia ?h ?intNueva))
+	(retract ?f)
+	(retract ?g)
+)
+
+; Regla que comienza la lluvia
+; Comienza a llover cuando en la hora h hay una prevision de lluvia
+(defrule comenzarLluvia
+	(hora ?h)
+	?f <- (LluviaPrevista ?h ?tipo ?int)
+	?g <- (LluviaActual ?)
+	=>
+	(printout t crlf "Comienza a llover con intensidad " ?tipo crlf)
+	(retract ?f)
+	(retract ?g)
+	(assert (LluviaActual ?tipo))
+)
+
+; Regla que indica que para la lluvia o que no va a llover durante la hora h
+(defrule pararLluvia
+	(hora ?h)
+	?f <- (LluviaPrevista ?h no)
+	?g <- (LluviaActual ?)
+	=>
+	(printout t crlf "Durante esta hora no llueve" crlf)
+	(retract ?f)
+	(retract ?g)
+	(assert (LluviaActual no))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -159,6 +296,7 @@
 (defrule calcularRegarPlanta
 	(regar ?p off)
 	(vaporizador ?p off)
+	(LluviaActual no)
 	(Tiesto ?p)
 	(not (esperar_humedad ?p ?))
 
@@ -203,6 +341,7 @@
 )
 
 (defrule riegoNo
+	(declare (salience 20))
 	?f <- (modulo Riego)
 	?g <- (riego ?p no ?)
 	=>
@@ -290,9 +429,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Reglas para gestionar la vaporizacion de las plantas
 
+; Regla que permite deducir si se debe vaporizar una planta o no
+; Si se supera la temperatura critica, esta debe ser vaporizada
+; En caso contrario, no se deduce nada
 (defrule calcularVaporizarPlanta
 	(declare (salience 10))
 	(regar ?p off)
+	(LluviaActual no)
 	?f <- (vaporizador ?p off)
 	(ultimo_registro Temperatura ?p ?t)
 	(valor_registrado ?t Temperatura ?p ?temp)
@@ -313,8 +456,8 @@
 	(assert (modulo Vaporizacion))
 )
 
-; Regla para regar las plantas
-; Modifica el valor de humedad de la planta
+; Regla para vaporizar las plantas
+; Modifica el valor de temperatura de la planta de forma gradual
 (defrule vaporizarPlanta
 	(modulo Vaporizacion)
 	(vaporizador ?p on ?tempIdeal)
@@ -329,8 +472,8 @@
 	(assert (valor Temperatura ?p ?newTemp))
 )
 
-; Regla para detener el regado de la planta
-; Detiene el regado de las plantas una vez que se ha llegado al valor objetivo
+; Regla para detener la vaporizacion de la planta
+; Detiene la vaporizacion de las plantas una vez que se ha llegado al valor objetivo
 ; o se ha excedido
 (defrule detenerVaporizadoPlanta
 	(declare (salience 10))
