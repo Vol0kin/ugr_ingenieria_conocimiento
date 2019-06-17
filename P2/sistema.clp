@@ -298,11 +298,6 @@
 	(modulo CalculoSiguienteLluvia)			; Comprobar que esta activo el modulo de calculo de la siguiente lluvia
 	?f <- (Contador ?h ?cont)
 	(test (> ?cont 0))						; Comprobar que el contador no ha acabado
-
-	; Obtener la lluvia y comprobar que es de tipo 'no' para seguir
-	; comprobando los siguientes hechos
-	(LluviaPrevista ?h ?tipo ?int)
-	(test (eq ?tipo no))
 	=>
 	(bind ?sigHora (mod (+ ?h 1) 24))
 	(bind ?nuevoCont (- ?cont 1))
@@ -314,6 +309,7 @@
 ; Se comprueba independientemente de cual sea el valor de ?contador,
 ; ya que puede ser tanto el primer como ultimo hecho a comprobar
 (defrule contadorSiguienteLluvia
+	(declare (salience 10))
 	?f <- (modulo CalculoSiguienteLluvia)	; Comprobar que esta activo el modulo de calculo de la siguiente lluvia (se desactiva luego)
 	?g <- (Contador ?h ?cont)				; Obtener la hora
 
@@ -322,6 +318,8 @@
 	(LluviaPrevista ?h ?tipo ?int)
 	(test (neq ?tipo no))
 	=>
+	(printout t crlf "El sistema ha deducido que lloverá con intensidad "
+	?tipo " en las proximas 8 horas" crlf)
 	(retract ?f ?g)
 	(assert (SiguienteLluvia ?tipo ?h))
 	(assert (modulo Riego))					; Activar el modulo de riego
@@ -333,6 +331,7 @@
 ; que no va a llover, se deduce que no se va a producir una lluvia durante
 ; el intervalo de 8 horas posterior a la hora actual
 (defrule contadorNoLluvia
+	(declare (salience 10))
 	?f <- (modulo CalculoSiguienteLluvia)	; Comprobar que esta activo el modulo de calculo de la siguiente lluvia (se desactiva luego)
 
 	; Comprobar que el contador ha llegado a 0
@@ -346,6 +345,7 @@
 	(LluviaPrevista ?h ?tipo ?int)
 	(test (eq ?tipo no))
 	=>
+	(printout t crlf "El sistema ha deducido que no lloverá en las proximas 8 horas" crlf)
 	(retract ?f ?g)							; Eliminar hecho contador y desactivar modulo CalculoSiguienteLluvia
 	(assert (SiguienteLluvia no 0))
 	(assert (modulo Riego))					; Activar el modulo de riego

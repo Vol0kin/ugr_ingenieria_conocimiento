@@ -230,6 +230,7 @@ obtenerse realmente o a los deseados por el usuario.
 \section{Descripción del sistema}
 
 \subsection{Variables de entrada del problema}
+\label{subsect:input}
 
 Las entradas al sistema son los valores que miden los sensores de humedad, temperatura y luminosidad para cada planta y la previsión
 de lluvia para una determinada hora.
@@ -341,19 +342,122 @@ En cuanto a la vaporización, tenemos el siguiente hecho:
 
 \subsection{Conocimiento global del sistema}
 
-El sistema tiene una serie de hechos y reglas que son globales para todo él. Es decir, pueden ser accedidas desde cualquier
-módulo
+El sistema tiene una serie de hechos que son gloables a todo el sistema y que se cargan al inicio. A continuación se van a describir
+brevemente cuáles son estos hechos, explicando como se llaman y la funcionalidad que tienen:
+
+\begin{itemize}
+	\item \textbf{Tiesto}: Contiene los tipos de plantas especificados. Inicialmente hay 3, tal y como se mencionó anteriormente:
+	un cactus, un tilipán y una palmera.
+	\item \textbf{HumedadMin}, \textbf{HumedadMax} y \textbf{HumedadCrit}: Valores enteros que representan las humedades mínima,
+	máxima y crítica de la planta. Esto significa que la humedad ideal o media de la planta planta está entre el mínimo y el máximo.
+	Si está por encima del máximo será una humedad alta, y si está por debajo del mínimo será baja. Adicionalemnte, si la humedad
+	es muy próxima al valor crítico o baja de este, significará que obligatoriamente se tiene que regar la planta\footnote{Si se
+	desean modificar estos valores, se le da la libertad al usuario para hacerlo. El sistema difuso funciona con estos conceptos
+	de humedad por intervalos. Si se desean modificar los valores que permiten crear los conjuntos difusos, se tiene la libertad
+	de modificar el programa en Python3 que contiene los valores para crear estos conjuntos.}. Un ejemplo de este conocimiento es
+	el siguiente hecho que representa un valor de HumedadMin (para los otros casos solo cambia el primer valor, pero la estructura
+	es la misma):
+\begin{lstlisting}
+	(HumedadMin Cactus 800)
+\end{lstlisting}
+	\item \textbf{TemperaturaMin}, \textbf{TemperaturaMax} y \textbf{TemperaturaCrit}: Valores enteros que representan la temperatura
+	mínima, máxima y crítica de la planta, respectivamente. Al igual que en el caso anterior, se considerará que la temperatura
+	ideal o media se encuentra entre los valores mínimo y máximo. Una temperatura baja se encontrará por debajo del mínimo y una
+	alta por encima del máximo\footnote{Tal y como se dijo antes, estos valores se pueden modificar. El sistema difuso también
+	utiliza rangos para las temperaturas para definir los conjuntos difusos, así que dichos valores se pueden modificar de ser
+	necesario.}. La temperatura crítica indica un valor de temperatura alta que ya no puede ser tolerado por la
+	planta, y que por tanto, debe ser \textbf{vaporizada} si se excede este valor. A continuación se muestra un ejemplo que
+	representa la temperatura mínima, aunque para los otros hechos la estructura es la misma:
+\begin{lstlisting}
+(TemperaturaMin Cactus 15)
+\end{lstlisting}
+	\item \textbf{LuminosidadMin} y \textbf{LuminosidadMax}: Valores enteros que representan la luminosidad mínima y máxima de
+	una planta. Como antes, la luminosidad ideal o media se encuentra entre los valores máximos y mínimos. Por debajo del mínimo
+	se considera que hay una baja luminosidad, mientras que por encima del máximo que hay una alta luminosidad \footnote{De nuevo,
+	estos valores se pueden modificar. Los valores que utiliza el sistema difuso para crear los conjuntos difusos también se pueden
+	modificar para adaptarlos a las necesidades.}.	La luminosidad será una especie
+	de indicativo de la cantidad de luz que recibe la planta, y por ende, es una representación del momento del día en el que nos
+	encontramos. La luminosidad influirá a la hora de regar más o menos las plantas. A continuación se muestra un ejemplo que
+	representa la luminosidad mínima, y para el caso de la máxima, la estructura es la misma solo que cambia el primer valor:
+\begin{lstlisting}
+(LuminosidadMin Cactus 300)
+\end{lstlisting}
+	\item \textbf{Regado}: Valor entero que indica cuánto incrementa la humedad de la planta por cada unidad de tiempo que se pasa
+	regando. Se representa de la siguiente forma (el valor asociado puede cambiarse):
+\begin{lstlisting}
+(Regado 100)
+\end{lstlisting}
+	\item \textbf{Vaporizado}: Valor entero que indica cuánto se decrementa la temperatura de la planta por cada unidad de tiempo
+	que se pasa vaporizando. Se representa de la siguiente forma (el valor puede cambiar):
+\begin{lstlisting}
+(Vaporizado 2)
+\end{lstlisting}
+	\item \textbf{hora}: Valor entero que representa la hora actual. Toma valores en el rango $[0, 23]$. Inicialmente se indica que
+	son las 8 de la mañana:
+\begin{lstlisting}
+(hora 8)
+\end{lstlisting}
+	\item \textbf{LluviaActual}: Hecho que representa si actualmente está lloviendo o no, dependiendo de la previsión que había
+	para esa hora en concreto. Inicialmente se indica que para la hora actual no está lloviendo. Los posibles valores de LLuviaActual
+	que se pueden tener son \textbf{no}, \textbf{debil}, \textbf{moderada}, \textbf{fuerte} y \textbf{torrencial}. A continuación
+	se muestra el valor inicial, tal y como se ha mencionado anteriormente:
+\begin{lstlisting}
+(LluviaActual no)
+\end{lstlisting}
+\end{itemize}
+
+Adicionalmente, tal y como se indicó anteriormente, hay dos archivos extra, \textit{sensores-init.clp} y \textit{previsiones.clp}
+que contienen hechos iniciales relacionados con los sensores de los tiestos y las previsiones del tiempo. Estos valores siguien
+la misma estructura que los datos de entrada mostrados en la sección \ref{subsect:input}. Se recomienda cargar estos hechos, ya
+que evitan tener que introducirlos a mano. Este conocimiento inicial se ha separado del resto del sistema para que sea más fácil
+localizarlo y modificarlo y añadirle lo que se necesite de ser necesario. Además, puede que el usuario no quiera cargar estos
+hechos iniciales y que los quiera definir él mismo.
 
 \subsection{Especificación de los módulos desarrollados}
 
-\subsubsection{Estructura de los módulos}
 
-\subsubsection{Descripción de los módulos}
+El sistema experto utiliza 3 módulos distintos. Aparte de ellos, el sistema tiene una serie de reglas que pueden funcionar
+independientemente del módulo activo, como por ejemplo leer las entradas de los sensores o actualizar la hora y las previsiones
+de tiempo.
+
+A continuación se describe cada uno de los módulos:
+
+\begin{itemize}
+	\item \textbf{Módulo Riego}: Este módulo se encarga de decidir el riego de las plantas utilizando las entradas de los sensores,
+	las previsiones de tiempo y los resultados proporcionados por el sistema difuso. Cada vez que llega una nueva entrada a
+	cualquiera de los sensores o se cambia la hora se comprueba si se puede regar dicha planta o no. El módulo utiliza el resultado
+	obtenido por el sistema difuso para saber si debe regar o no y se lo comunica al usuario. En caso de decidir regar, activa
+	los sistemas de riego de la planta y se encarga de llegar a la humedad ideal. Antes de utilizar este módulo se activa un módulo
+	que veremos un poco más adelante que se encarga de deducir si habrá alguna lluvia en las próximas 8 horas con el objetivo de
+	modificar los resultados que ha proporcionado el sistema difuso.
+	\item \textbf{Módulo Vaporizacion}: Este módulo se activa cuando el sistema ha decidido realizar la vaporización de una planta
+	debido a las altas temperaturas que se han detectado. Una vez activado, se encarga de la vaporización de la planta hasta que
+	los sensores de temperatura detecten que se ha llegado al valor especificado.
+	\item \textbf{Módulo CalculoSiguienteLluvia}: Este módulo es utilizado justo antes de utilizar el módulo \textbf{Riego} y se
+	encarga de deducir si en las próximas 8 horas se va a producir una lluvia, o si en el caso contrario, no se producirá. Para
+	ello, utiliza información referente a las previsiones de tiempo. Para que el módulo funcione correctamente, se tienen que
+	tener las previsiones para todas las horas, ya que se asume que se tiene información completa sobre el tiempo, aunque esta pueda
+	cambiar posteriormente.
+\end{itemize}
+
+El sistema va activando y desactivando uno u otro módulo en función de lo que vaya deduciendo. Si decide regar es que ha deducido
+que es necesario realizar un riego, y por tanto primero activaría el módulo \textbf{CalculoSiguienteLluvia} que se encarga de
+deducir si va a llover o no y posteriormente activaría el módulo \textbf{Riego} para decidir si debe o no regar la planta con la
+información de la que dispone. Si por ejemplo deduce que debe vaporizar una planta, el sistema activará el módulo
+\textbf{Vaporizacion} para realizar la vaporización de la planta, y una vez que ha terminado, la desactivaría.
+
+Es importante destacar que la vaporización, tal y como se mencionó anteriormente, tiene una mayor prioridad que el riego. Es decir,
+el sistema dará preferencia a la deducción de la necesidad de vaporizar a la de regar, y por tanto, activará antes el módulo
+\textbf{Vaporizacion} que el módulo \textbf{Riego}.
 
 \subsection{Hechos y reglas de cada módulo}
 
-A continuación se
-pueden ver las reglas utilizadas por el sistema:
+A continuación se van a presentar de forma superficial las reglas que utiliza cáda módulo y se va a explicar muy brevemente
+su funcionamiento. Si se quiere obtener más información sobre el funcionamiento concreto de las reglas, se recomienda consultar
+la implementación del sistema.
+
+Antes de ver las reglas, vamos a mostrar cuáles son las reglas que utiliza el sistema difuso para decidir si debe o no realizar
+el riego. Se recuerda que no somos expertos en el riego de las plantas, pero que las reglas representan lo que haríamos:
 
 \begin{gather*}
 	\text{si} \; \; Humedad(Baja) \land Luminosidad(Baja) \land Temperatura(Baja) \rightarrow \; \; \text{regar media} \\
@@ -369,11 +473,201 @@ pueden ver las reglas utilizadas por el sistema:
 \end{gather*}
 
 Las salidas que devuelve son con qué intensidad regar en los casos en los que se debe hacer (\textbf{poca}, \textbf{media} o
-\textbf{alta intensidad}) o si no debe hacerse.
+\textbf{alta} intensidad) o si no debe hacerse. Poca intensidad significa regar la planta hasta alcanzar una humedad un poco
+superior al mínimo. Intensidad media significa regar las plantas para conseguir una humedad un poco por debajo del máximo. Alta
+intensidad significa regar las plantas para conseguir una humedad un poco superior a la del máximo.
+
+Con esto dicho, vamos a ver cómo serían las reglas del sistema.
+
+\subsubsection{Reglas generales}
+
+Primero vamos a ver las reglas generales, desde donde se activan los distintos módulos:
+
+\begin{itemize}
+	\item \textbf{nuevo\_registro}: Registra un nuevo valor detectado por los sensores, añadiendo un hecho (valor\_registrado Tiempo
+	Tipo Planta Valor) y un (ultimo\_registro Tipo Planta Tiempo).
+	\item \textbf{ultimo\_reg}: Elimina de la base del conocimiento el anterior ultimo\_registro y se queda con el más reciente.
+	\item \textbf{eliminarEsperarHumedad}: Esta regla elimina el valor de (esperar\_humedad Planta Tiempo) que había en el
+	conocimiento al llegarle un nuevo valor de humedad mediante el sensor correspondiente. El hecho de esperar\_humedad indica que
+	la planta ha sido regada recientemente, y por tanto, que el sistema no necesita deducir si debe o no ser regada de nuevo.
+	\item \textbf{siguienteHora}: Esta regla permite adelantar la hora actual en 1 deduciendo cuál es la siguiente hora. Para
+	activarla, se necesita un hecho que sea (siguiente\_hora) en la base del conocimiento.
+	\item \textbf{calcularNoLluvia}: Regla que deduce si no se va a llover durante una determinada hora que viene dada por el hecho
+	(prevision\_lluvia Hora Intensidad). Se considera que no va a llover si la intensidad está en el rango $[0, 0.2)$. Actualiza el
+	conocimiento añadiendo un hecho que es (LluviaPrevista Hora no Intensidad).
+	\item \textbf{calcularLluviaDebil}: Regla que deduce si la lluvia prevista a una hora dada por el hecho (prevision\_lluvia Hora
+	Intensidad) es débil, es decir, si la intensidad está en el rango $[0.2, 6.5)$. Actualiza el conocimiento añadiendo un hecho que
+	es (LluviaPrevista Hora debil Intensidad).
+	\item \textbf{calcularLluviaMedio}: Regla que deduce si la lluvia prevista a una hora dada por el hecho (prevision\_lluvia Hora
+	Intensidad) es moderada o media, es decir, si la intensidad está en el rango $[6.5, 15)$. Actualiza el conocimiento añadiendo un
+	hecho que es (LluviaPrevista Hora moderada Intensidad).
+	\item \textbf{calcularLluviaFuerte}: Regla que deduce si la lluvia prevista a una hora dada por el hecho (prevision\_lluvia Hora
+	Intensidad) es fuerte, es decir, si la intensidad está en el rango $[15, 100)$. Actualiza el conocimiento añadiendo un
+	hecho que es (LluviaPrevista Hora fuerte Intensidad).
+	\item \textbf{calcularLluviaTorrencial}: Regla que deduce si la lluvia prevista a una hora dada por el hecho (prevision\_lluvia
+	Hora Intensidad) es torrencial, es decir, si la intensidad es de 100 o más. Actualiza el conocimiento añadiendo un
+	hecho que es (LluviaPrevista Hora torrencial Intensidad).
+	\item \textbf{modificarPrediccionLluvia}: Regla que permite modificar el conocimiento asociado a las predicciones de tiempo
+	cuando se detecta que en la base de conocimiento hay un hecho que es (modificar\_prevision Hora NuevaIntensidad), actualizando
+	el conocimiento del sistema sobre la predicción de lluvia a esa hora de la forma correspondiente.
+	\item \textbf{comenzarLluvia}: Regla que sirve para deducir que en la hora actual va a llover según la predicción que había para
+	la hora actal. Se activa al cambiar la hora. Elimina la previsión que había para la nueva hora y añade a la base del conocimiento
+	un hecho de tipo (LluviaActual Tipo), donde Tipo es débil, moderada, fuerte o torrencial.
+	\item \textbf{pararLluvia}: Regla que deduce que la lluvia ha parado o que no llueve durante la hora actual de forma parecida
+	a la que se hace en la regla anterior.
+	\item \textbf{calcularRegarPlanta}: Regla que deduce si se debe regar o no la planta utilizando la información de los sensores
+	y pasándosela al sistema difuso. Luego activa el módulo \textbf{CalculoSiguienteLluvia} para deducir si en las próximas 8
+	horas se producirá lluvia o no. No se puede regar si se está vaporizando o está lloviendo.
+	\item \textbf{calcularVaporizarPlanta}: Regla que deduce si se debe vaporizar la planta a partir de los valores de temperaturas
+	que han detectado los sensores. Se encarga de activar el módulo \textbf{Vaporizacion}. No se puede vaporizar si se está regando
+	o está lloviendo.
+\end{itemize}
+
+\subsubsection{Módulo Riego}
+
+A continuación se describirán las reglas que utiliza el módulo Riego:
+
+\begin{itemize}
+	\item \textbf{riegoNo}: Regla que muestra información al usuario sobre lo que ha determinado el sistema de no regar la
+	la planta. Además de eso, sale del módulo Riego, ya que no se va a regar la planta.
+	\item \textbf{modificarRiegoLluviaDebil}: Regla para modificar la intensidad del riego si se ha deducido que en las próximas
+	8 horas se va a producir una lluvia débil. En este caso, se ha supuesto que la lluvia débil no va a modificar en mucha cantidad
+	la humedad de la planta, así que se deja la intensidad del riego se deja tal cuál. Sirve más para ofrecer información al usuario
+	sobre las decisiones que va tomando el sistema en función de lo que va deduciendo.
+	\item \textbf{modificarRiegoAltoLluviaModerada}: Regla para modificar la intensidad del riego si se ha deducido que en las
+	próximas 8 horas se va a producir una lluvia moderada. En este caso, si el riego que se iba a hacer un riego de alta intensidad
+	se reduce a uno de media, ya que la lluvia aportará algo de humedad. Todos los demás casos se dejan igual.
+	\item \textbf{modificarRiegoAltoLluviaFuerte}: Regla para modificar la intensidad del riego si se ha deducido que en las próximas
+	8 horas se va a producir una lluvia fuerte. Si se deduce que se producirá una lluvia fuerte y se tiene que el sistema difuso
+	había determinado que se tiene que regar con intensidad fuerte, se reduce a débil, ya que la lluvia tendrá un gran aporte de
+	humedad.
+	\item \textbf{modificarRiegoMedioLluviaFuerte}: Regla para modificar la intensidad del riego si se ha deducido que en las
+	próximas 8 horas se va a producir una lluvia fuerte. Si se deduce que se producirá una lluvia fuerte y se tiene que el sistema
+	difuso había determinado que se tiene que regar con intensidad media, se reduce a débil, ya que la lluvia tendrá un gran aporte
+	de humedad.
+	\item \textbf{modificarRiegoLluviaTorrencialNo}: Regla para modificar la intensidad del riego si se ha deducido que en las
+	próximas 8 horas se va a producir una lluvia torrencial. Si el sistema deduce que la humedad no está por debajo del nivel
+	crítico corregirá el conocimiento eliminando las deducciones que había hecho sobre regar las plantas y saldrá del módulo Riego,
+	ya que no se va a regar la planta. Esto se debe a que el sistema no considera necesario regar una planta a menos que su humedad
+	esté por debajo del nivel crítico si ha detectado que se va a producir una lluvia torrencial.
+	\item \textbf{modificarRiegoLluviaTorrencialBajo}: Regla para modificar la intensidad del riego si se ha deducido que en las
+	próximas 8 horas se va a producir una lluvia torrencial. Si el sistema deduce que la humedad está por debajo del nivel
+	crítico eliminará la intensidad del riego deducida anteriormente y determinará que se debe realizar un riego de baja intensidad,
+	ya que la lluvia torrencial hará un gran aporte de humedad y no será necesario regar más.
+	\item \textbf{riegoBajo}: Regla que, una vez deducido que el tipo de riego es de intensidad baja, activa el riego de
+	intensidad baja con la humedad objetivo que ha determinado el sistema difuso (un poco por encima del mínimo).
+	\item \textbf{riegoMedio}: Regla que, una vez deducido que el tipo de riego es de intensidad media, activa el riego de
+	intensidad media con la humedad objetivo que ha determinado el sistema difuso (un poco por debajo del máximo).
+	\item \textbf{riegoAlto}: Regla que, una vez deducido que el tipo de riego es de intensidad alta, activa el riego de
+	intensidad alta con la humedad objetivo que ha determinado el sistema difuso (un poco por encima del máximo).
+	\item \textbf{regarPlanta}: Regla para regar la planta. Cuando se ha decidido regar la planta, se aplica esta regla para ir
+	regando la planta y aumentando su humedad hasta llegar al valor objetivo de humedad.
+	\item \textbf{detenerRegarPlanta}: Regla para detener el regado de la planta una vez que se ha llegado al valor
+	objetivo, desactivando por tanto el módulo Riego.
+\end{itemize}
+
+\subsubsection{Módulo CalculoSiguienteLluvia}
+
+A continuación se describirán las reglas que utiliza el módulo CalculoSiguienteLluvia:
+
+\begin{itemize}
+	\item \textbf{contador}: Regla contador. Cuando se actibe este módulo y el sistema inserte el hecho (Contador HoraContador
+	ValorContador) se activa esta regla y se empiezan a recorrer las previsiones en busca de la primera lluvia hasta que el
+	ValorContador llegue a 0, incrementando cada vez en 1 la HoraContador.
+	\item \textbf{contadorSiguienteLluvia}: Regla que se dispara cuando el contador se consigue llegar a una hora en la que
+	hay lluvia. Añade el hecho (SiguienteLluvia Tipo Hora) a la base del conocimiento, donde Tipo se deduce segúna la previsión de
+	lluvia que haya a esa hora,  y sale del módulo \textbf{CalculoSiguienteLluvia}, activando ahora el módulo \textbf{Riego}.
+	\item \textbf{contadorNoLluvia}: Regla que se dispara cuando el contador llega a 0. Se deduce que no se va a producir ninguna
+	lluvia ya que no se ha encontrado ninguna previsión de lluvia utilizando el contador. Por tanto, añade el hecho deducido
+	(SiguienteLluvia no Hora), desactiva el módulo \textbf{CalculoSiguienteLluvia} y activa el módulo \textbf{Riego}.
+\end{itemize}
+
+\subsubsection{Módulo Vaporizacion}
+
+A continuación se describirán las reglas que utiliza el módulo Vaporizacion:
+
+\begin{itemize}
+	\item \textbf{vaporizarPlanta}: Regla para vaporizar la planta. Una vez activo el módulo, se aplica esta regla para ir
+	vaporizando la planta y reduciendo su temperatura hasta llegar al valor objetivo de temperatura.
+	\item \textbf{detenerVaporizadoPlanta}: Regla para detener la vaporización de la planta una vez que se ha llegado al valor
+	objetivo, desactivando por tanto el módulo Vaporizacion.
+\end{itemize}
 
 \newpage
 
 \section{Manual de uso del sistema}
+
+En esta sección se va a explicar brevemente cómo trabajar con el sistema.
+
+Lo primero de todo es, una vez inicializado CLIPS, cargar el sistema. Opcionalmente se pueden cargar los valores iniciales de
+los sensores y las previsiones del tiempo. Si no se quiere hacer, se tienen que introducir manualmente. Sin embargo, si se toma
+este segundo curso de acción, se tienen que introducir, al menos, previsiones del tiempo para las 8 siguientes horas.
+
+A continuación se puede ver un ejemplo de cómo se podrían cargar todos los archivos. Si no se quiere alguno de ellos, basta con
+simplemente no introducirlo:
+
+\begin{lstlisting}
+(load sistema.clp)
+(load sensores-init.clp)
+(load previsiones.clp)
+(reset)
+(run)
+\end{lstlisting}
+
+Una vez cargados el sistema y los datos, se pueden insertar valores de los sensores de la siguiente forma:
+
+\begin{lstlisting}
+(assert (valor Tipo Planta ValorSensor))
+\end{lstlisting}
+
+\noindent donde \textit{Tipo} es Temperatura, Luminosidad o Humedad; \textit{Planta} es alguna de las plantas y \textit{ValorSensor}
+es el valor medido por el sensor. Un ejemplo de esto sería el siguiente (el (run) se utiliza para insertar los hechos en la base
+del conocimiento):
+
+\begin{lstlisting}
+(assert (valor Temperatura Tulipan 24))
+(run)
+\end{lstlisting}
+
+Para ir insertando previsiones del tiempo, se puede hacer de la siguiente forma:
+
+\begin{lstlisting}
+(assert (prevision_lluvia Hora Intensidad))
+\end{lstlisting}
+
+\noindent donde \textit{Hora} es un valor en el rango $[0, 23]$ e \textit{Intensidad} es un valor real que representa la intensidad
+de la lluvia en mm/h. Un ejemplo seria el siguiente:
+
+\begin{lstlisting}
+(assert (prevision_lluvia 11 45))
+(run)
+\end{lstlisting}
+
+En caso de que el usuario se haya equivocado o la previsión del tiempo para una determinada hora cambie, se puede hacer lo siguiente
+para modificar la previsión:
+
+
+\begin{lstlisting}
+(assert (modificar_prevision Hora NuevaIntensidad))
+\end{lstlisting}
+
+\noindent donde \textit{Hora} y \textit{NuevaIntensidad} tienen los mismos significados que antes. Por ejemplo, si quieremos
+modificar la previsión que anteriormente teníamos de las 11 para que tenga una intensidad de 14, debemos hacer los siguiente:
+
+\begin{lstlisting}
+(assert (modificar_prevision 11 14))
+(run)
+\end{lstlisting}
+
+El sistema también permite pasar las horas. Para hacerlo, basta con simplemente hacer lo siguiente:
+
+\begin{lstlisting}
+(assert (siguiente_hora))
+(run)
+\end{lstlisting}
+
+Si se necesita modificar algo del sistema difuso, se recomienda echar un vistazo a este ejemplo de sistema difuso
+\cite{bib:fuzzy-example} y a la documentación de las funciones implementadas \cite{bib:skfuzzy-tutorial}.
 
 \newpage
 
@@ -387,6 +681,13 @@ NumPy
 GitHub. \textit{scikit-fuzzy}
 \\\url{https://github.com/scikit-fuzzy/scikit-fuzzy}
 
+\bibitem{bib:fuzzy-example}
+Ejemplo de sistema difuso
+\\\url{https://pythonhosted.org/scikit-fuzzy/auto_examples/plot_tipping_problem.html#example-plot-tipping-problem-py}
+
+\bibitem{bib:skfuzzy-tutorial}
+Manual de las funciones utilizadas de \textit{scikit-fuzzy}
+\\\url{https://pythonhosted.org/scikit-fuzzy/api/skfuzzy.html}
 
 
 \end{thebibliography}
