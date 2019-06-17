@@ -5,14 +5,46 @@
 \usepackage[hidelinks]{hyperref}			% Poner enlaces sin marcarlos en rojo
 \usepackage{fancyhdr}						% Modificar encabezados y pies de pagina
 \usepackage{float}							% Insertar figuras
-\usepackage[textwidth=390pt]{geometry}		% Anchura de la pagina
+\usepackage[textwidth=397pt]{geometry}		% Anchura de la pagina
 \usepackage[nottoc]{tocbibind}				% Referencias (no incluir num pagina indice en Indice)
 \usepackage{enumitem}						% Permitir enumerate con distintos simbolos
 \usepackage[T1]{fontenc}					% Usar textsc en sections
 \usepackage{amsmath}						% Símbolos matemáticos
+\usepackage{listings}
+\usepackage{algorithm}
+
+\usepackage{color}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+ 
+\lstset{style=mystyle, language=Lisp}
+
+
 
 % Comando para poner el nombre de la asignatura
-\newcommand{\asignatura}{Asignatura}
+\newcommand{\asignatura}{Ingeniería del Conocimiento}
 \newcommand{\autor}{Vladislav Nikolov Vasilev}
 
 % Configuracion de encabezados y pies de pagina
@@ -41,8 +73,8 @@
 \textsc{GRADO EN INGENIERÍA INFORMÁTICA}\\[1cm]
 
 \noindent\rule[-1ex]{\textwidth}{1pt}\\[1.5ex]
-\textsc{{\Huge PRÁCTICA X\\[0.5ex]}}
-\textsc{{\Large Subtítulo práctica\\}}
+\textsc{{\Huge PRÁCTICA FINAL\\[0.5ex]}}
+\textsc{{\Large SBC para el riego automático de cultivos y plantas\\}}
 \noindent\rule[-1ex]{\textwidth}{2pt}\\[3.5ex]
 
 \end{minipage}
@@ -53,15 +85,16 @@
 
 \centering
 
-\textbf{Autor}\\ {\autor{}}\\[2.5ex]
-\textbf{Rama}\\ {Computación y Sistemas Inteligentes}\\[2.5ex]
-\vspace{0.3cm}
+\textbf{Autor}\\ {\autor{}}\\[1ex]
+\textbf{DNI}\\ {X8743846M}\\[1ex]
+\textbf{Rama}\\ {Computación y Sistemas Inteligentes}\\[1ex]
+\vspace{0.2cm}
 
 \includegraphics[scale=0.3]{img/etsiit.jpeg}
 
-\vspace{0.7cm}
+\vspace{0.5cm}
 \textsc{Escuela Técnica Superior de Ingenierías Informática y de Telecomunicación}\\
-\vspace{1cm}
+\vspace{0.5cm}
 \textsc{Curso 2018-2019}
 \end{minipage}
 \end{titlepage}
@@ -74,13 +107,287 @@
 
 \setlength{\parskip}{1em}
 
+\section{Resumen del funcionamiento del sistema}
+
+El sistema ha sido implementado utilizando \textbf{CLIPS} y \textbf{Python3}, más concretamente la versión 3.7.1 de Python.
+Para poder utilizar el sistema, se recomienda tener instalada una versión de Python igual o superior a la 3.7.1,
+además de tener instalados en el equipo los módulos \textit{numpy} \cite{bib:numpy} y \textit{scikit-fuzzy}
+\cite{bib:skfuzzy}, los cuáles son utilizados por el programa.
+
+El sistema implementado en CLIPS es el sistema experto principal. Éste utiliza un pequeño programa escrito en Python que se encarga
+de realizar las deducciones correspondientes al riego de las plantas mediante un sistema basado en \textit{lógica difusa}.
+Los dos programas se comunican enviándose la información necesaria para realizar las deducciones y las deducciones mismas mediante
+archivos.
+
+El sistema principal se encuentra en \textit{sistema.clp}, mientras que \textit{sensores-init.clp} contiene información inicial
+relativa a los sensores (para no tener que insertar unos datos iniciales a mano) y \textit{previsiones.clp} contiene una serie
+de previsiones del tiempo que se recomienda encarecidamente cargar en el sistema para que pueda funcionar de forma correcta,
+ya que el sistema supone que contiene información completa sobre la previsión del tiempo para las siguientes horasr.
+Estas previsiones pueden ser modificadas, tal y como ser indicará posteriormente. El archivo \textit{fuzzy.py} contiene
+el sistema basado en lógica difusa que se encarga de realizar las deducciones para el riego de las plantas.
+
+En general, el funcionamiento del sistema es bastante simple. El sistema experto va recibiendo valores de entrada de los sensores
+relativos a la \textbf{humedad}, \textbf{temperatura} y \textbf{luminosidad} de las plantas, además de valores de predicciones del
+tiempo.
+Con estos datos, el sistema decide si activar el \textbf{vaporizador} en aquellas plantas que considere oportunas con tal de
+reducir su temperatura o si activar el sistema de \textbf{riego} de las plantas, utilizando para ello los valores de los sensores.
+El sistema experto principal le envía los datos al sistema difuso para que se encargue de decidir cuál es el mejor curso de acción.
+Una vez decidido, envía los resultados de vuelta, y el sistema experto manipula esta información utilizando las predicciones de las
+próximas 8 horas con el objetivo de determinar cuál es el mejor curso de acción a tomar.
+
+El sistema también permite pasar las horas una a una, simulando el paso del tiempo y actualizando el conocimiento de forma
+correspondiente, deduciendo por ejemplo si en la hora actual está lloviendo según la previsión que había para esa hora.
+
+\newpage
+
+\section{Descripción del proceso de creación del sistema}
+
+\subsection{Procedimiento seguido para el desarrollo de la base de conocimiento}
+
+Para el desarrollo del sistema, se han ido satisfaciendo los requisitos especificados uno a uno. Estos requisitos son los
+siguientes:
+
+\begin{enumerate}
+	\item Ser consciente de las necesidades de humedad de cada cultivo. Se ha de considerar, al menos, tres tiestos con rangos
+	diferentes de humedad ideal.
+	\item Activar el riego automático de cada tiesto independientemente cuando dicho cultivo lo necesite.
+	\item Desactivar el riego de cada tiesto cuando se llegue a la humedad deseada.
+	\item Realizar un riego más inteligente en función del momento del día, considerando la posible evaporación.
+	\item Evitar, siempre que se pueda, el riego en situaciones de altas temperaturas y sol. No se podrá posponer en presencia de
+	valores de humedad críticamente bajos.
+	\item Activar vaporizadores para refrescar el ambiente de cada tiesto y reducir altas temperaturas.
+	\item Posibilitar la combinación del uso de vaporizadores con el riego en momentos de altas temperaturas, cuando sea
+	estrictamente necesario.
+	\item Utilizar la información meteorológica de la zona local para gestionar el riego de manera más eficiente, como posponer o
+	regar con menor intensidad en caso de lluvia, según su intensidad y la certeza de la predicción.
+\end{enumerate}
+
+Primero se ha comenzado especificando las plantas a utilizar, que en este caso han sido un \textbf{cactus}, un \textbf{tulipán}
+y una \textbf{palmera}, y se han especificado los valores mínimos y máximos de humedad, temperatura y luminosidad, además de los
+valores críticos de humedad y temperatura.
+
+Sobre estos datos se ha añadido la capacidad de activar y desactivar el riego de forma automática para cada planta según
+su humedad. Posteriormente, se introdujo el sistema difuso escrito en Python3 que se encargaba de determinar si regar las plantas
+o no y con qué intensidad se deben regar en función de la información proporcionada por los sensores. Estas salidas se verán
+más adelante. Además de eso, se explicarán qué reglas ha seguido el sistema difuso para obtener las salidas.
+
+Posteriormente, se añadió la capacidad al sistema de activar y desactivar los vaporizadores de las plantas, tal y cómo se hacía con
+el sistema de riego. Los vaporizadores tienen precedencia al riego, ya que si se usan antes de regar para reducir las temperaturas,
+se pueden conseguir unos riegos más eficaces, ya que se podrá regar más.
+
+Finalmente, para poder trabajar con el tiempo atmosférico, se introdujo en el sistema la capacidad de representar el tiempo y las
+predicciones de tiempo según la hora, además del tiempo actual (si llueve o no y con qué intensidad lo hace). También se modifició
+el funcionamiento del sistema para poder manipular las salidas que le proporcionaba el sistema difuso para que, según el pronóstico
+de lluvias de las próximas 8 horas, pueda ser capaz de deducir si se debe regar menos de lo que indica la salida o si se debería
+proceder tal y como ha indicado el sistema difuso. En secciones posteriores veremos cómo se han representado estos hechos y cómo
+se han ido deduciendo las cosas en el sistema.
+
+\subsection{Procedimiento de validación y verificación del sistema}
+
+La validación y verificación del sistema ha sido un proceso que se ha ido haciendo a lo largo de todo el desarrollo, desde las
+etapas iniciales hasta las finales.
+
+\subsubsection{Verificación}
+
+En cuanto a la verificación, se ha comprobado que el sistema fuese el correcto en cada etapa. A medida que se iba añadiendo
+funcionalidad al sistema se iba comprobando que ésta funcionase correctamente. Por ejemplo, si se incluía una nueva regla, se 
+probaba de forma interactiva añadiendo hechos a la base de conocimiento con el objetivo de ver si esa regla nueva era capaz de
+activarse o no.
+También se ha ido comprobando a medida que se iba construyendo el sistema que no hubiesen \textbf{errores sintácticos} ni
+\textbf{inconsistencias}, como por ejemplo reglas que nunca se llegasen a disparar o que produjesen resultados contradictorios
+entre ellas. También se ha comprobado que no se produjesen inconsistencias semánticas con el fin de mantener la coherencia
+dentro del sistema. Se ha ido comprobando, por ejemplo, si los valores deducidos se correspondían con el tipo que debían tener.
+
+Otra cosa que se ha hecho para validar el sistema es simular el comportamiento de un usuario para ver que podía trabajar con
+normalidad sin que se produjesen errores o inconsistencias.
+
+Con todo el proceso de verificación se cree que se han eliminado la mayoría o casi todos los errores, ya que se ha ido haciendo de
+forma progresiva. Sin embargo, nunca podemos estar seguros del todo, con lo cuál es posible que aún exista algún que otro pequeño
+error que no hayamos podido detectar debido a que, por motivos de tiempo, es imposible simular toda la actividad que realizaría
+un usuario, ya que existen infinitos casos que se pueden dar.
+
+\subsubsection{Validación}
+
+En cuanto a la validación, se ha ido comprobando en cada fase que se cumplían los requisitos especificados. Además, se ha comprobado
+que los resultados obtenidos fuesen correctos según las entradas que se le iba proporcionando al sistema. Aparte de esto, se
+ha comprobado que la comunicación entre el sistema principal y el sistema difuso fuese correcta, que fuese un sistema relativamente
+rápido y que fuese capaz de funcionar en tiempo real y que, además de todo esto, el sistema explicase suficientemente bien todo lo
+que sucede en el sistema, explicando al usuario todas las deducciones que va haciendo de tal forma que éste tenga en todo momento
+suficiente información para saber qué es lo que está ocurriendo.
+
+Se cree que, en general, los resultados que ofrece el sistema son buenos. Sin embargo, al no haber extraído el conocimiento de
+un experto si no de nosotros mismos, ya que nos hemos considerado los expertos, puede que hayamos cometido algún error a la hora de,
+por ejemplo, especificar con qué intensidad se debe regar una planta en función de la información proporcionada por los sensores
+de entrada. Esto es inevitable, ya que no tenemos una fuente real de conocimiento experto. Sin embargo, el sistema está hecho de tal
+forma que se pueda modificar el funcionamiento fácilmente.
+
+Por ejemplo, si no se está de acuerdo con algún resultado obtenido de, por ejemplo, el riego que se debe realizar, se puede revisar
+el sistema difuso y modificar las reglas del riego para que produzcan unos resultados que se ajusten más a los que deberían
+obtenerse realmente o a los deseados por el usuario.
+
+\newpage
+
+\section{Descripción del sistema}
+
+\subsection{Variables de entrada del problema}
+
+Las entradas al sistema son los valores que miden los sensores de humedad, temperatura y luminosidad para cada planta y la previsión
+de lluvia para una determinada hora.
+
+Las entradas de los sensores tienen la siguiente forma:
+
+\begin{lstlisting}
+(valor Tipo Planta Valor-Medido)
+\end{lstlisting}
+
+\noindent donde:
+
+\begin{itemize}
+	\item \textit{Tipo} representa Humedad, Temperatura o Luminosidad.
+	\item \textit{Planta} hace referencia a una de las tres plantas (Cactus, Tulipan o Palmera).
+	\item \textit{Valor-Medido} es el valor medido por el sensor. Todos son valores enteros y toman los siguients valores:
+	
+	\begin{itemize}
+		\item En el caso de la \textbf{humedad}, los valores posibles están en el rango $[0, 1023]$, donde 0 indica humedad máxima
+		y 1023 indica lo más seco posible.
+		\item En el caso de \textbf{temperatura}, los valores posibles son todos los enteros, tanto positivos como negativos.
+		Sin embargo, el sistema difuso solo acepta valores en el rango $[0, 99]$, ya que no parece muy posible que las plantas
+		que se cuiden sobrevivan a temperaturas superiores o inferiores a esas.
+		\item En el caso de \textbf{luminosidad}, los valores van desde 0 a cualquier valor, no hay límite. Sin embargo, el
+		sistema difuso asume que la luminosidad más grande es 1000. De ser necesario, se puede ampliar.
+	\end{itemize}
+\end{itemize}
+
+Las entradas de las previsiones tienen la siguiente forma:
+
+\begin{lstlisting}
+(prevision_lluvia Hora Intensidad)
+\end{lstlisting}
+
+\noindent donde:
+
+\begin{itemize}
+	\item \textit{Hora} es un valor entero en el rango $[0, 23]$ que representa a qué hora hace referencia la previsión.
+	\item \textit{Intensidad} es un valor real que indica cuál es la intensidad de la lluvia en mm/h.
+\end{itemize}
+
+Estos datos de entrada son procesados para facilitarle el funcionamiento al sistema posteriormente. Para cada \textbf{valor}
+de entrada, se generan estos dos hechos:
+
+\begin{lstlisting}
+(valor_registrado Tiempo Tipo Planta Valor-Medido)
+(utlimo_registro Tipo Planta Tiempo)
+\end{lstlisting}
+
+\noindent donde \textit{Tiempo} es un valor que representa un tiempo desde que se inició el sistema. Esta es una forma
+de identificar a los valores registrados y hacerlos únicos. Así, desde el \textbf{ultimo\_registro} se puede acceder fácilmente
+al \textit{Valor-Medido} utilizando \textit{Tiempo}.
+
+Para las previsiones, se obtienen los siguientes datos de entrada procesados:
+
+\begin{lstlisting}
+(LluviaPrevista Hora Tipo Intensidad)
+\end{lstlisting}
+
+\noindent donde \textit{Tipo} va en función de la intensidad. Es decir:
+
+\begin{itemize}
+	\item Si \textit{Tipo} es \textbf{no} es que no va a llover, lo cuál significa que \textit{Intensidad} está en el
+	rango $[0, 0.2)$.
+	\item Si \textit{Tipo} es \textbf{debil} es que habrá lluvia de intensidad débil, lo cuál significa que
+	\textit{Intensidad} está en el rango $[0.2, 6.5)$.
+	\item Si \textit{Tipo} es \textbf{moderada} es que habrá lluvia de intensidad moderada, lo cuál significa que
+	\textit{Intensidad} está en el rango $[6.5, 15)$.
+	\item Si \textit{Tipo} es \textbf{fuerte} es que habrá lluvia de intensidad fuerte, lo cuál significa que
+	\textit{Intensidad} está en el rango $[15, 100)$.
+	\item Si \textit{Tipo} es \textbf{torrencial} es que habrá lluvia de intensidad torrencial, lo cuál significa que
+	\textit{Intensidad} está en el rango $[100, \infty)$.
+\end{itemize}
+
+\subsection{Variables de salida del problema}
+
+Como tal, el sistema no produce ningún valor de salida. Sin embargo, tiene que interactuar con los sistemas de riego y vaporización.
+Para ello, el sistema tiene que activar/desactivar estos sistemas, con lo cuál usará una serie de hechos.
+
+Para el caso del riego, se tiene el siguiente hecho:
+
+\begin{lstlisting}
+(regar Planta Estado [HumedadObjetivo])
+\end{lstlisting}
+
+\noindent donde se tiene que:
+
+\begin{itemize}
+	\item \textit{Planta} es la planta asociada a dicho sistema de riego.
+	\item \textit{Estado} indica si el sistema de riego está encendido o apagado mediante los valores on/off.
+	\item \textit{HumedadObjetivo} es un valor que solo aparece si \textit{Estado} está en on. Este valor indica cuál es la humedad
+	que se quiere conseguir con el riego.
+\end{itemize}
+
+En cuanto a la vaporización, tenemos el siguiente hecho:
+
+\begin{lstlisting}
+(vaporizador Planta Estado [TemperaturaObjetivo])
+\end{lstlisting}
+
+\noindent donde se tenemos:
+
+\begin{itemize}
+	\item \textit{Planta} es la planta asociada a dicho sistema de vaporización.
+	\item \textit{Estado} indica si el sistema de vaporización está encendido o apagado mediante los valores on/off.
+	\item \textit{TemperaturaObjetivo} es un valor que solo aparece si \textit{Estado} está en on. Este valor indica cuál es la
+	temperatura a conseguir con la vaporización.
+\end{itemize}
+
+\subsection{Conocimiento global del sistema}
+
+El sistema tiene una serie de hechos y reglas que son globales para todo él. Es decir, pueden ser accedidas desde cualquier
+módulo
+
+\subsection{Especificación de los módulos desarrollados}
+
+\subsubsection{Estructura de los módulos}
+
+\subsubsection{Descripción de los módulos}
+
+\subsection{Hechos y reglas de cada módulo}
+
+A continuación se
+pueden ver las reglas utilizadas por el sistema:
+
+\begin{gather*}
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Baja) \land Temperatura(Baja) \rightarrow \; \; \text{regar media} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Baja) \land Temperatura(Media) \rightarrow \; \; \text{regar alta} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Baja) \land Temperatura(Alta) \rightarrow \; \; \text{regar media} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Media) \land Temperatura(Baja) \rightarrow \; \; \text{regar media} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Media) \land Temperatura(Media) \rightarrow \; \; \text{regar alta} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Media) \land Temperatura(Alta) \rightarrow \; \; \text{regar poca} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Alta) \land Temperatura(Baja) \rightarrow \; \; \text{regar poca} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Alta) \land Temperatura(Media) \rightarrow \; \; \text{regar media} \\
+	\text{si} \; \; Humedad(Baja) \land Luminosidad(Alta) \land Temperatura(Alta) \rightarrow \; \; \text{regar poca} \\
+	\text{si} \; \; Humedad(Media) \lor Humedad(Alta) \rightarrow \; \; \text{no regar}
+\end{gather*}
+
+Las salidas que devuelve son con qué intensidad regar en los casos en los que se debe hacer (\textbf{poca}, \textbf{media} o
+\textbf{alta intensidad}) o si no debe hacerse.
+
+\newpage
+
+\section{Manual de uso del sistema}
+
 \newpage
 
 \begin{thebibliography}{5}
 
-\bibitem{nombre-referencia}
-Texto referencia
-\\\url{https://url.referencia.com}
+\bibitem{bib:numpy}
+NumPy
+\\\url{https://www.numpy.org/}
+
+\bibitem{bib:skfuzzy}
+GitHub. \textit{scikit-fuzzy}
+\\\url{https://github.com/scikit-fuzzy/scikit-fuzzy}
+
+
 
 \end{thebibliography}
 
